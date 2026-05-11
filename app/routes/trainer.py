@@ -5,7 +5,7 @@ import mysql.connector
 from collections import defaultdict
 from datetime import datetime,timedelta
 
-from app.tasks import evaluate_submission 
+# from app.tasks import evaluate_submission 
 
 import os
 import io

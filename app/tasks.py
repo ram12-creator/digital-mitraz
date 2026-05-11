@@ -170,7 +170,7 @@
 
 
 
-from app.extensions import celery
+# from app.extensions import celery
 from flask import current_app
 import mysql.connector
 import os
@@ -299,7 +299,7 @@ def _evaluate_web(submission_file_path, test_case_file_path):
 # ===============================================================
 # MAIN CELERY TASK
 # ===============================================================
-@celery.task(name='app.tasks.evaluate_submission')
+# @celery.task(name='app.tasks.evaluate_submission')
 def evaluate_submission(submission_id):
     print(f"--- STARTING EVALUATION FOR SUBMISSION ID: {submission_id} ---") # Log start
     
