@@ -1,6 +1,4 @@
-
-# ___________________________________________
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, make_response
 from flask_login import login_required, current_user
 from app.models import User
 from app.utils.helpers import generate_password, hash_password, get_user_stats
@@ -13,17 +11,7 @@ import io
 from collections import defaultdict
 import os
 from werkzeug.utils import secure_filename
-from flask import render_template, make_response
-from xhtml2pdf import pisa
-from io import BytesIO
-from flask import render_template, request, jsonify, url_for, make_response, current_app
-from werkzeug.utils import secure_filename
-# from xhtml2pdf import pisa
-# from io import BytesIO
-import os
 import json
-import csv
-from io import StringIO
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -54,9 +42,6 @@ def log_activity(user_id, action, table_affected, record_id, description):
             if conn.is_connected():
                 cursor.close()
                 conn.close()
-
-
-
 
 
 @admin_bp.route('/dashboard')
@@ -103,7 +88,7 @@ def dashboard():
             'data': [row['count'] for row in leave_breakdown]
         }
 
-        # 3. Attendance Trend (FIXED: Uses 'status' enum)
+        # 3. Attendance Trend
         cursor.execute("""
             SELECT 
                 DATE_FORMAT(a.attendance_date, '%b %Y') as month_name,
@@ -121,7 +106,7 @@ def dashboard():
             'data': [round(row['avg_attendance'], 1) for row in attendance_trend]
         }
 
-        # 4. Students to Watch (FIXED: Uses 'status' enum)
+        # 4. Students to Watch
         thirty_days_ago = datetime.now() - timedelta(days=30)
         cursor.execute("""
             SELECT u.full_name, b.batch_name, 
@@ -156,12 +141,24 @@ def dashboard():
 
     return render_template('admin/dashboard.html', stats=stats, chart_data=chart_data,
                            students_to_watch=students_to_watch, pending_leaves_list=pending_leaves_list)
+# ===============================================================
+# PDF DOWNLOAD DISABLED - Function replaced to avoid xhtml2pdf dependency
+# ===============================================================
+
+# ===============================================================
+# PDF DOWNLOAD DISABLED - Function replaced to avoid xhtml2pdf dependency
+# ===============================================================
+@admin_bp.route('/download_student_pdf/<int:student_id>')
+def download_student_pdf(student_id):
+    """PDF export temporarily disabled to optimize deployment"""
+    flash('PDF export feature is currently disabled. Please use CSV export instead.', 'warning')
+    return redirect(url_for('admin.student_management'))
 
 @admin_bp.route('/api/dashboard_stats', methods=['POST'])
 @login_required
 def get_dashboard_stats():
     data = request.get_json()
-    filter_type = data.get('filter_type', 'month') # day, month, year
+    filter_type = data.get('filter_type', 'month')
     batch_id = data.get('batch_id', 'all')
     
     conn = current_app.get_db_connection()
@@ -171,26 +168,19 @@ def get_dashboard_stats():
         try:
             cursor = conn.cursor(dictionary=True)
             
-            # --- 1. DYNAMIC ATTENDANCE TREND ---
-            # FIX: We construct the date string manually in the GROUP BY logic to avoid ambiguity.
-            
             if filter_type == 'day':
-                # For DAY: Group by the full date.
                 sql_select = "DATE_FORMAT(a.attendance_date, '%Y-%m-%d') as label"
                 sql_group = "a.attendance_date" 
                 sql_order = "a.attendance_date ASC"
                 limit_clause = "LIMIT 30"
                 
             elif filter_type == 'month':
-                # For MONTH: Group by Year and Month. 
-                # We select the formatted string directly based on Year/Month.
                 sql_select = "DATE_FORMAT(a.attendance_date, '%b %Y') as label"
                 sql_group = "YEAR(a.attendance_date), MONTH(a.attendance_date), DATE_FORMAT(a.attendance_date, '%b %Y')"
                 sql_order = "YEAR(a.attendance_date) ASC, MONTH(a.attendance_date) ASC"
                 limit_clause = "LIMIT 12"
                 
             elif filter_type == 'year':
-                # For YEAR: Group by Year.
                 sql_select = "DATE_FORMAT(a.attendance_date, '%Y') as label"
                 sql_group = "YEAR(a.attendance_date), DATE_FORMAT(a.attendance_date, '%Y')"
                 sql_order = "YEAR(a.attendance_date) ASC"
@@ -199,7 +189,7 @@ def get_dashboard_stats():
             query = f"""
                 SELECT 
                     {sql_select},
-                    AVG(a.is_present) * 100 as value
+                    AVG(CASE WHEN a.status IN ('PRESENT', 'HALF_DAY_MORNING', 'HALF_DAY_AFTERNOON') THEN 1 ELSE 0 END) * 100 as value
                 FROM attendance a
                 JOIN course_admins ca ON a.course_id = ca.course_id
                 WHERE ca.admin_id = %s
@@ -220,7 +210,7 @@ def get_dashboard_stats():
                 'data': [round(row['value'], 1) for row in att_results]
             }
 
-            # --- 2. BATCH PERFORMANCE (REAL-TIME GRADE) ---
+            # Batch Performance
             perf_query = """
                 SELECT b.batch_name, AVG(COALESCE(asub.grade, asub.auto_grade)) as avg_grade
                 FROM batches b
@@ -249,7 +239,7 @@ def get_dashboard_stats():
                 'data': [round(row['avg_grade'], 1) for row in batch_results]
             }
             
-            # --- 3. COURSE POPULARITY ---
+            # Course Popularity
             cursor.execute("""
                 SELECT c.course_name, COUNT(s.student_id) as count
                 FROM courses c
@@ -265,7 +255,7 @@ def get_dashboard_stats():
                 'data': [row['count'] for row in pop_results]
             }
 
-            # --- 4. LEAVE BREAKDOWN ---
+            # Leave Breakdown
             cursor.execute("""
                 SELECT status, COUNT(*) as count
                 FROM leave_applications la
@@ -280,7 +270,7 @@ def get_dashboard_stats():
                 'data': [row['count'] for row in leave_results]
             }
 
-            # --- 5. ASSIGNMENT STATUS ---
+            # Assignment Status
             cursor.execute("""
                 SELECT 
                     SUM(CASE WHEN asub.grade IS NOT NULL OR asub.auto_grade IS NOT NULL THEN 1 ELSE 0 END) as graded,
@@ -299,7 +289,7 @@ def get_dashboard_stats():
             return jsonify({'success': True, 'data': response_data})
 
         except Exception as e:
-            print(f"API Error: {e}") # This will print to your terminal now
+            print(f"API Error: {e}")
             return jsonify({'success': False, 'message': str(e)})
         finally:
             cursor.close()
@@ -308,9 +298,7 @@ def get_dashboard_stats():
     return jsonify({'success': False, 'message': 'DB Connection Error'})
 
 
-# --- BATCH MANAGEMENT ROUTES  ---
-
-
+# --- BATCH MANAGEMENT ROUTES ---
 
 @admin_bp.route('/batches')
 def batch_management():
@@ -718,108 +706,7 @@ def attendance_management():
                            selected_date=selected_date,
                            now=datetime.now())
 
-# @admin_bp.route('/mark_attendance', methods=['POST'])
-# def mark_attendance():
-#     data = request.get_json()
-#     batch_id = data.get('batch_id')
-#     attendance_date = data.get('attendance_date')
-#     present_ids = data.get('present_ids', [])
-#     absent_ids = data.get('absent_ids', [])
 
-#     if not all([batch_id, attendance_date]):
-#         return jsonify({'success': False, 'message': 'Batch and date are required.'})
-    
-#     conn = current_app.get_db_connection()
-#     try:
-#         cursor = conn.cursor(dictionary=True)
-#         cursor.execute("SELECT course_id FROM batches WHERE batch_id = %s", (batch_id,))
-#         course_id = cursor.fetchone()['course_id']
-        
-#         # Use INSERT ... ON DUPLICATE KEY UPDATE for efficiency
-#         attendance_records = []
-#         for student_id in present_ids:
-#             attendance_records.append((student_id, course_id, batch_id, attendance_date, True, current_user.user_id))
-#         for student_id in absent_ids:
-#             attendance_records.append((student_id, course_id, batch_id, attendance_date, False, current_user.user_id))
-            
-#         if attendance_records:
-#             query = """
-#                 INSERT INTO attendance (student_id, course_id, batch_id, attendance_date, is_present, marked_by)
-#                 VALUES (%s, %s, %s, %s, %s, %s)
-#                 ON DUPLICATE KEY UPDATE is_present = VALUES(is_present), marked_by = VALUES(marked_by)
-#             """
-#             cursor.executemany(query, attendance_records)
-#             conn.commit()
-#             log_activity(current_user.user_id, 'update', 'attendance', batch_id, f"Marked attendance for batch {batch_id} on {attendance_date}")
-#             return jsonify({'success': True, 'message': 'Attendance saved successfully!'})
-#         return jsonify({'success': True, 'message': 'No changes to save.'})
-#     except mysql.connector.Error as err:
-#         conn.rollback()
-#         return jsonify({'success': False, 'message': f'Database error: {err}'})
-#     finally:
-#         if conn.is_connected(): cursor.close(); conn.close()
-
-
-# @admin_bp.route('/mark_attendance', methods=['POST'])
-# def mark_attendance():
-#     data = request.get_json()
-#     batch_id = data.get('batch_id')
-#     attendance_date = data.get('attendance_date')
-    
-#     # New Data Structure: expected to be {student_id: "PRESENT", student_id: "HALF_DAY_MORNING", ...}
-#     attendance_map = data.get('attendance_map', {}) 
-
-#     if not all([batch_id, attendance_date]):
-#         return jsonify({'success': False, 'message': 'Batch and date are required.'})
-    
-#     conn = current_app.get_db_connection()
-#     try:
-#         cursor = conn.cursor(dictionary=True)
-        
-#         # 1. Check if the date is a Holiday
-#         cursor.execute("SELECT title FROM holidays WHERE holiday_date = %s", (attendance_date,))
-#         holiday = cursor.fetchone()
-        
-#         # 2. Get course ID
-#         cursor.execute("SELECT course_id FROM batches WHERE batch_id = %s", (batch_id,))
-#         course_id = cursor.fetchone()['course_id']
-        
-#         attendance_records = []
-        
-#         for student_id, status in attendance_map.items():
-#             final_status = status
-#             notes = None
-            
-#             # If it's a holiday, force status to HOLIDAY regardless of input
-#             if holiday:
-#                 final_status = 'HOLIDAY'
-#                 notes = holiday['title']
-                
-#             attendance_records.append((
-#                 student_id, course_id, batch_id, attendance_date, final_status, current_user.user_id, notes
-#             ))
-            
-#         if attendance_records:
-#             # Upsert Query for new Status column
-#             query = """
-#                 INSERT INTO attendance (student_id, course_id, batch_id, attendance_date, status, marked_by, notes)
-#                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-#                 ON DUPLICATE KEY UPDATE status = VALUES(status), marked_by = VALUES(marked_by), notes = VALUES(notes)
-#             """
-#             cursor.executemany(query, attendance_records)
-#             conn.commit()
-            
-#             msg = f"Attendance saved for {attendance_date}."
-#             if holiday: msg += f" Note: Marked as Holiday ({holiday['title']})."
-            
-#             return jsonify({'success': True, 'message': msg})
-            
-#         return jsonify({'success': True, 'message': 'No students to mark.'})
-#     except mysql.connector.Error as err:
-#         conn.rollback()
-#         return jsonify({'success': False, 'message': f'Database error: {err}'})
-#     finally:
-#         if conn.is_connected(): cursor.close(); conn.close()
 
 @admin_bp.route('/mark_attendance', methods=['POST'])
 def mark_attendance():
@@ -1617,11 +1504,7 @@ def save_socio():
         conn.close()
 
 # --- ROUTE: PDF Download ---
-@admin_bp.route('/download_student_pdf/<int:student_id>')
-def download_student_pdf(student_id):
-    """PDF export temporarily disabled to optimize deployment"""
-    flash('PDF export feature is currently disabled. Please use CSV export instead.', 'warning')
-    return redirect(url_for('admin.student_management'))
+
 
 
 
