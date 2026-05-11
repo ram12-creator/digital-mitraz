@@ -11,4 +11,3 @@ if __name__ == '__main__':
 
 
 
-# celery -A celery_app.celery worker --loglevel=info --pool=solo

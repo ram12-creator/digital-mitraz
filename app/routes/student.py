@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 from app.utils.helpers import get_user_stats
-from app.tasks import evaluate_submission
 from app.utils.validators import validate_date_range,validate_leave_dates
 import mysql.connector
 from datetime import datetime, timedelta
@@ -307,6 +306,75 @@ def assignments():
 # ===============================================================
 # ASSIGNMENT SUBMISSION (Corrected to use submission_text)
 # ===============================================================
+# @student_bp.route('/submit_assignment/<int:assignment_id>', methods=['POST'])
+# @login_required
+# def submit_assignment(assignment_id):
+#     # Get the student's text comment from the form
+#     student_comment = request.form.get('student_comments', '')
+    
+#     # Check for the uploaded file
+#     if 'submission_file' not in request.files:
+#         return jsonify({'success': False, 'message': 'No file part in the request.'})
+#     file = request.files['submission_file']
+#     if file.filename == '':
+#         return jsonify({'success': False, 'message': 'Please select a solution file to upload.'})
+
+#     conn = current_app.get_db_connection()
+#     if not conn:
+#         return jsonify({'success': False, 'message': 'Database connection error.'})
+        
+#     try:
+#         cursor = conn.cursor(dictionary=True)
+#         student_id = current_user.student_id
+        
+#         cursor.execute("SELECT evaluation_type, due_date FROM assignments WHERE assignment_id = %s", (assignment_id,))
+#         assignment_data = cursor.fetchone()
+#         if not assignment_data:
+#             return jsonify({'success': False, 'message': 'Assignment not found.'})
+
+#         is_late = datetime.now() > assignment_data['due_date'] if assignment_data['due_date'] else False
+        
+#         # Save the uploaded file
+#         upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'submissions')
+#         os.makedirs(upload_dir, exist_ok=True)
+#         _, file_extension = os.path.splitext(file.filename)
+#         unique_filename = f"submission_{assignment_id}_{student_id}_{int(datetime.now().timestamp())}{file_extension}"
+#         file_path_full = os.path.join(upload_dir, unique_filename)
+#         file.save(file_path_full)
+#         file_path_relative = os.path.join('uploads', 'submissions', unique_filename).replace("\\", "/")
+        
+#         # Use INSERT ... ON DUPLICATE KEY to save both the comment and the file path
+#         cursor.execute("""
+#             INSERT INTO assignment_submissions (assignment_id, student_id, submission_text, file_path, is_late, submitted_at, evaluation_status) 
+#             VALUES (%s, %s, %s, %s, %s, NOW(), %s)
+#             ON DUPLICATE KEY UPDATE 
+#             submission_text = VALUES(submission_text), 
+#             file_path = VALUES(file_path), 
+#             is_late = VALUES(is_late), 
+#             submitted_at = NOW(),
+#             evaluation_status = VALUES(evaluation_status), 
+#             grade = NULL, auto_grade = NULL, feedback = NULL, auto_feedback = NULL
+#         """, (assignment_id, student_id, student_comment, file_path_relative, is_late, 'pending'))
+        
+#         cursor.execute("SELECT submission_id FROM assignment_submissions WHERE assignment_id = %s AND student_id = %s", (assignment_id, student_id))
+#         submission_id = cursor.fetchone()['submission_id']
+
+#         if assignment_data.get('evaluation_type', 'none') != 'none':
+#             evaluate_submission.delay(submission_id)
+#             message = 'Assignment submitted! It is now queued for auto-evaluation.'
+#         else:
+#             message = 'Assignment submitted successfully!'
+        
+#         conn.commit()
+#         log_activity(current_user.user_id, 'submit', 'assignment_submissions', submission_id, f"Submitted assignment ID: {assignment_id}")
+#         return jsonify({'success': True, 'message': message})
+
+#     except mysql.connector.Error as err:
+#         conn.rollback()
+#         return jsonify({'success': False, 'message': f'Database error: {err}'})
+#     finally:
+#         if conn and conn.is_connected(): conn.close()
+
 @student_bp.route('/submit_assignment/<int:assignment_id>', methods=['POST'])
 @login_required
 def submit_assignment(assignment_id):
@@ -344,7 +412,7 @@ def submit_assignment(assignment_id):
         file.save(file_path_full)
         file_path_relative = os.path.join('uploads', 'submissions', unique_filename).replace("\\", "/")
         
-        # Use INSERT ... ON DUPLICATE KEY to save both the comment and the file path
+        # REMOVED: Auto-evaluation logic - just set status to 'submitted' without processing
         cursor.execute("""
             INSERT INTO assignment_submissions (assignment_id, student_id, submission_text, file_path, is_late, submitted_at, evaluation_status) 
             VALUES (%s, %s, %s, %s, %s, NOW(), %s)
@@ -355,26 +423,21 @@ def submit_assignment(assignment_id):
             submitted_at = NOW(),
             evaluation_status = VALUES(evaluation_status), 
             grade = NULL, auto_grade = NULL, feedback = NULL, auto_feedback = NULL
-        """, (assignment_id, student_id, student_comment, file_path_relative, is_late, 'pending'))
+        """, (assignment_id, student_id, student_comment, file_path_relative, is_late, 'submitted'))
         
-        cursor.execute("SELECT submission_id FROM assignment_submissions WHERE assignment_id = %s AND student_id = %s", (assignment_id, student_id))
-        submission_id = cursor.fetchone()['submission_id']
-
-        if assignment_data.get('evaluation_type', 'none') != 'none':
-            evaluate_submission.delay(submission_id)
-            message = 'Assignment submitted! It is now queued for auto-evaluation.'
-        else:
-            message = 'Assignment submitted successfully!'
+        # REMOVED: evaluate_submission.delay(submission_id) - No Celery task
         
         conn.commit()
-        log_activity(current_user.user_id, 'submit', 'assignment_submissions', submission_id, f"Submitted assignment ID: {assignment_id}")
+        
+        message = 'Assignment submitted successfully! It will be reviewed by your trainer.'
         return jsonify({'success': True, 'message': message})
 
     except mysql.connector.Error as err:
         conn.rollback()
         return jsonify({'success': False, 'message': f'Database error: {err}'})
     finally:
-        if conn and conn.is_connected(): conn.close()
+        if conn and conn.is_connected():
+            conn.close()
 
 
 

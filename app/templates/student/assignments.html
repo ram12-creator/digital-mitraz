@@ -44,21 +44,17 @@
                         <td>{{ assignment.topic_name }}</td>
                         <td>{{ assignment.due_date.strftime('%b %d, %Y @ %I:%M %p') }}</td>
                         <td>
-                            {% if assignment.status == 'Graded' %}
+                            {% if assignment.grade is not none %}
                                 <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Graded</span>
-                            {% elif assignment.status == 'Processing' %}
-                                <span class="badge bg-info"><i class="fas fa-spinner fa-spin me-1"></i> Grading in Progress</span>
-                            {% elif assignment.evaluation_status == 'error' %}
-                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i> Evaluation Error</span>
-                            {% elif assignment.status == 'Submitted' %}
+                            {% elif assignment.submission_id is not none %}
                                 <span class="badge bg-primary">Submitted</span>
                             {% else %}
                                 <span class="badge bg-warning">Pending Submission</span>
                             {% endif %}
-                             {% if assignment.is_late %}<span class="badge bg-danger ms-1">Late</span>{% endif %}
+                            {% if assignment.is_late %}<span class="badge bg-danger ms-1">Late</span>{% endif %}
                         </td>
                         <td>
-                            {% set final_grade = assignment.grade if assignment.grade is not none else assignment.auto_grade %}
+                            {% set final_grade = assignment.grade %}
                             {% if final_grade is not none %}
                             <span class="badge bg-{{ 'success' if final_grade >= 80 else 'warning' if final_grade >= 60 else 'danger' }}">
                                 {{ final_grade }}%
@@ -69,7 +65,6 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                {% if assignment.evaluation_status != 'processing' %}
                                 <button class="btn btn-outline-primary" data-bs-toggle="modal" 
                                         data-bs-target="#submitAssignmentModal" 
                                         data-assignment-id="{{ assignment.assignment_id }}"
@@ -78,7 +73,6 @@
                                         data-bs-toggle="tooltip" title="Submit or Update">
                                     <i class="fas fa-upload"></i>
                                 </button>
-                                {% endif %}
 
                                 {% if assignment.file_path %}
                                 <a href="{{ url_for('static', filename=assignment.file_path) }}" class="btn btn-outline-success" download data-bs-toggle="tooltip" title="Download Assignment">
@@ -86,13 +80,12 @@
                                 </a>
                                 {% endif %}
                                 
-                                {% if assignment.status == 'Graded' %}
+                                {% if assignment.grade is not none %}
                                 <button class="btn btn-outline-dark" data-bs-toggle="modal" 
                                         data-bs-target="#viewFeedbackModal" 
                                         data-title="{{ assignment.title }}"
                                         data-final-grade="{{ final_grade }}"
-                                        data-manual-feedback="{{ assignment.feedback or '' }}"
-                                        data-auto-feedback="{{ assignment.auto_feedback or '' }}"
+                                        data-feedback="{{ assignment.feedback or 'No feedback provided.' }}"
                                         data-bs-toggle="tooltip" title="View Feedback">
                                     <i class="fas fa-comment-dots"></i>
                                 </button>
@@ -128,7 +121,7 @@
                     <div class="mb-3">
                         <label for="submissionFile" class="form-label">Upload Your Solution File *</label>
                         <input type="file" class="form-control" id="submissionFile" name="submission_file" required>
-                        <div class="form-text">Allowed types: .py, .sql, .xlsx, .zip, etc.</div>
+                        <div class="form-text">Allowed types: .pdf, .doc, .docx, .zip, .py, .sql, etc.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -151,16 +144,12 @@
             <div class="modal-body">
                 <h6 id="feedbackTitle" class="mb-3 text-primary"></h6>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Your Final Grade:</label>
+                    <label class="form-label fw-bold">Your Grade:</label>
                     <div><span class="badge fs-5" id="feedbackGrade"></span></div>
                 </div>
-                <div class="mb-3" id="manualFeedbackSection" style="display: none;">
+                <div class="mb-3">
                     <label class="form-label fw-bold">Trainer's Feedback:</label>
-                    <div class="p-3 bg-light rounded border" id="manualFeedbackContent"></div>
-                </div>
-                <div class="mb-3" id="autoFeedbackSection" style="display: none;">
-                    <label class="form-label fw-bold">Automated Feedback:</label>
-                    <div class="p-3 bg-light rounded border" id="autoFeedbackContent" style="white-space: pre-wrap;"></div>
+                    <div class="p-3 bg-light rounded border" id="feedbackContent" style="white-space: pre-wrap;"></div>
                 </div>
             </div>
         </div>
@@ -188,8 +177,7 @@ $(document).ready(function() {
         const button = $(event.relatedTarget);
         const modal = $(this);
         const grade = button.data('final-grade');
-        const manualFeedback = button.data('manual-feedback');
-        const autoFeedback = button.data('auto-feedback');
+        const feedback = button.data('feedback');
         
         modal.find('#feedbackTitle').text('Feedback for: ' + button.data('title'));
         const gradeBadge = modal.find('#feedbackGrade');
@@ -197,19 +185,7 @@ $(document).ready(function() {
             grade >= 80 ? 'bg-success' : grade >= 60 ? 'bg-warning' : 'bg-danger'
         );
         
-        if (manualFeedback) {
-            modal.find('#manualFeedbackContent').text(manualFeedback);
-            modal.find('#manualFeedbackSection').show();
-        } else {
-            modal.find('#manualFeedbackSection').hide();
-        }
-
-        if (autoFeedback) {
-            modal.find('#autoFeedbackContent').text(autoFeedback);
-            modal.find('#autoFeedbackSection').show();
-        } else {
-            modal.find('#autoFeedbackSection').hide();
-        }
+        modal.find('#feedbackContent').text(feedback || 'No feedback provided.');
     });
 
     // Handle form submission

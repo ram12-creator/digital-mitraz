@@ -358,13 +358,66 @@ def delete_topic(topic_id):
 
 # --- ASSIGNMENT MANAGEMENT ---
 
+# @trainer_bp.route('/create_assignment', methods=['POST'])
+# def create_assignment():
+#     # This is the updated version that handles test case files
+#     batch_id = request.form.get('batch_id')
+#     evaluation_type = request.form.get('evaluation_type', 'none')
+
+#     if not batch_id: return jsonify({'success': False, 'message': 'Batch ID is missing.'})
+
+#     conn = current_app.get_db_connection()
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute(
+#             """INSERT INTO assignments (title, description, topic_id, created_by, due_date, 
+#                                      assignment_type, max_points, evaluation_type, batch_id) 
+#                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+#             (request.form.get('title'), request.form.get('description'), request.form.get('topic_id'), 
+#              current_user.user_id, request.form.get('due_date'), request.form.get('assignment_type'), 
+#              request.form.get('max_points'), evaluation_type, batch_id)
+#         )
+#         assignment_id = cursor.lastrowid
+        
+#         # Handle assignment instruction file
+#         if 'assignment_file' in request.files:
+#             file = request.files['assignment_file']
+#             if file.filename != '':
+#                 upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'assignments')
+#                 os.makedirs(upload_dir, exist_ok=True)
+#                 filename = f"assignment_{assignment_id}_{file.filename}"
+#                 file_path = os.path.join(upload_dir, filename)
+#                 file.save(file_path)
+#                 relative_path = os.path.join('uploads', 'assignments', filename).replace("\\", "/")
+#                 cursor.execute("UPDATE assignments SET file_path = %s WHERE assignment_id = %s", (relative_path, assignment_id))
+
+#         # Handle test case file
+#         if 'test_case_file' in request.files:
+#             file = request.files['test_case_file']
+#             if file.filename != '':
+#                 upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'test_cases')
+#                 os.makedirs(upload_dir, exist_ok=True)
+#                 filename = f"testcase_{assignment_id}_{file.filename}"
+#                 file_path = os.path.join(upload_dir, filename)
+#                 file.save(file_path)
+#                 relative_path = os.path.join('uploads', 'test_cases', filename).replace("\\", "/")
+#                 cursor.execute("UPDATE assignments SET test_case_file_path = %s WHERE assignment_id = %s", (relative_path, assignment_id))
+        
+#         conn.commit()
+#         log_activity(current_user.user_id, 'create', 'assignments', assignment_id, f"Created assignment: {request.form.get('title')}")
+#         return jsonify({'success': True, 'message': 'Assignment created successfully!'})
+#     except mysql.connector.Error as err:
+#         conn.rollback(); return jsonify({'success': False, 'message': f'Database Error: {err}'})
+#     finally:
+#         if conn and conn.is_connected(): conn.close()
+
 @trainer_bp.route('/create_assignment', methods=['POST'])
 def create_assignment():
-    # This is the updated version that handles test case files
+    """Creates a new assignment (manual grading only)"""
     batch_id = request.form.get('batch_id')
-    evaluation_type = request.form.get('evaluation_type', 'none')
 
-    if not batch_id: return jsonify({'success': False, 'message': 'Batch ID is missing.'})
+    if not batch_id:
+        return jsonify({'success': False, 'message': 'Batch ID is missing.'})
 
     conn = current_app.get_db_connection()
     try:
@@ -375,7 +428,7 @@ def create_assignment():
                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             (request.form.get('title'), request.form.get('description'), request.form.get('topic_id'), 
              current_user.user_id, request.form.get('due_date'), request.form.get('assignment_type'), 
-             request.form.get('max_points'), evaluation_type, batch_id)
+             request.form.get('max_points'), 'none', batch_id)  # Force 'none' for evaluation_type
         )
         assignment_id = cursor.lastrowid
         
@@ -391,25 +444,17 @@ def create_assignment():
                 relative_path = os.path.join('uploads', 'assignments', filename).replace("\\", "/")
                 cursor.execute("UPDATE assignments SET file_path = %s WHERE assignment_id = %s", (relative_path, assignment_id))
 
-        # Handle test case file
-        if 'test_case_file' in request.files:
-            file = request.files['test_case_file']
-            if file.filename != '':
-                upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'test_cases')
-                os.makedirs(upload_dir, exist_ok=True)
-                filename = f"testcase_{assignment_id}_{file.filename}"
-                file_path = os.path.join(upload_dir, filename)
-                file.save(file_path)
-                relative_path = os.path.join('uploads', 'test_cases', filename).replace("\\", "/")
-                cursor.execute("UPDATE assignments SET test_case_file_path = %s WHERE assignment_id = %s", (relative_path, assignment_id))
+        # REMOVED: Test case file handling (no longer needed)
         
         conn.commit()
         log_activity(current_user.user_id, 'create', 'assignments', assignment_id, f"Created assignment: {request.form.get('title')}")
         return jsonify({'success': True, 'message': 'Assignment created successfully!'})
     except mysql.connector.Error as err:
-        conn.rollback(); return jsonify({'success': False, 'message': f'Database Error: {err}'})
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Database Error: {err}'})
     finally:
-        if conn and conn.is_connected(): conn.close()
+        if conn and conn.is_connected():
+            conn.close()
 
 
 

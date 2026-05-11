@@ -14,9 +14,7 @@
 
 {% block content %}
 
-<!-- =============================================================== -->
-<!-- JINJA MACRO TO RENDER TOPIC HIERARCHY RECURSIVELY               -->
-<!-- =============================================================== -->
+<!-- JINJA MACRO TO RENDER TOPIC HIERARCHY RECURSIVELY -->
 {% macro render_topic_accordion(topic_list, parent_id) %}
 <div class="accordion" id="topicsAccordion-{{ parent_id }}">
     {% for topic in topic_list %}
@@ -221,7 +219,7 @@
     </div>
 </div>
 
-<!-- Create Assignment Modal -->
+<!-- Create Assignment Modal (Simplified - No Auto-Evaluation) -->
 <div class="modal fade" id="createAssignmentModal" tabindex="-1">
      <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -254,26 +252,7 @@
                         <div class="col-md-4 mb-3"><label class="form-label">Type</label><select class="form-select" name="assignment_type"><option value="individual">Individual</option><option value="group">Group</option></select></div>
                         <div class="col-md-4 mb-3"><label class="form-label">Max Points</label><input type="number" class="form-control" name="max_points" min="0" value="100"></div>
                     </div>
-                    <div class="mb-3"><label class="form-label">Assignment File (PDF, etc.)</label><input type="file" class="form-control" name="assignment_file"></div>
-                    <hr>
-                    <h6 class="text-muted">Auto-Evaluation Settings</h6>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Evaluation Type</label>
-                            <select class="form-select" name="evaluation_type">
-    <option value="none" selected>Manual Grading Only</option>
-    <option value="python">Python Auto-Grade</option>
-    <option value="sql">SQL Auto-Grade</option>
-    <option value="excel">Excel Auto-Grade</option>
-    <option value="web">Web (HTML/CSS) Auto-Grade</option>
-</select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Test Case File</label>
-                            <input type="file" class="form-control" name="test_case_file">
-                            <div class="form-text">Required for auto-grading. E.g., a `test.py` script.</div>
-                        </div>
-                    </div>
+                    <div class="mb-3"><label class="form-label">Assignment File (PDF, DOC, etc.)</label><input type="file" class="form-control" name="assignment_file"></div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Create Assignment</button></div>
             </form>
@@ -297,8 +276,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Logic for "Add Sub-topic" and "New Tool" buttons ---
     createTopicModalEl.addEventListener('show.bs.modal', function(event) {
         const button = event.relatedTarget;
-        const parentId = button.dataset.parentId;
-        const parentName = button.dataset.parentName;
+        const parentId = button?.dataset.parentId;
+        const parentName = button?.dataset.parentName;
         const titleEl = document.getElementById('createTopicModalTitle');
         const parentSelect = document.getElementById('parent_topic_id');
 
@@ -363,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }));
     
-    // --- Create Assignment Form Submission ---
+    // --- Create Assignment Form Submission (Simplified) ---
     document.getElementById('createAssignmentForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const response = await fetch('{{ url_for("trainer.create_assignment") }}', {

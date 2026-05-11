@@ -36,28 +36,21 @@ def create_app():
         MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
         MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
         MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
-        # CELERY CONFIGURATION REMOVED FOR RENDER DEPLOYMENT
     )
     
     # Create necessary upload subdirectories if they don't exist
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profile_pictures'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'assignments'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'submissions'), exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'test_cases'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'documents'), exist_ok=True)
+    # REMOVED: test_cases directory (no longer needed for auto-evaluation)
+    # os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'test_cases'), exist_ok=True)
     
     # --- Initialize Extensions with the App ---
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
 
-    # --- CELERY CONFIGURATION COMPLETELY REMOVED ---
-    # The following Celery code has been removed for Render deployment:
-    # - celery.conf.update(...)
-    # - celery.conf.imports
-    # - ContextTask class
-    # - celery.Task assignment
-    
     # --- Database Connection Helper ---
     def get_db_connection():
         try:

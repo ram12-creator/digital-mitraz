@@ -34,9 +34,8 @@
                     <tr>
                         <th>Student Name</th>
                         <th>Submitted At</th>
-                        <th>Evaluation Status</th>
-                        <th>Auto Grade</th>
-                        <th>Manual Grade</th>
+                        <th>Status</th>
+                        <th>Grade</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -46,29 +45,17 @@
                         <td>{{ submission.student_name }}</td>
                         <td>{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') if submission.submitted_at else 'Not submitted' }}</td>
                         <td>
-                            {# --- NEW: Display Evaluation Status --- #}
-                            {% if submission.evaluation_status == 'completed' %}
-                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Completed</span>
-                            {% elif submission.evaluation_status == 'processing' %}
-                                <span class="badge bg-info"><i class="fas fa-spinner fa-spin me-1"></i> Processing</span>
-                            {% elif submission.evaluation_status == 'error' %}
-                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i> Error</span>
+                            {% if submission.grade is not none %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Graded</span>
+                            {% elif submission.submitted_at %}
+                                <span class="badge bg-primary">Submitted</span>
                             {% else %}
                                 <span class="badge bg-secondary">Pending</span>
                             {% endif %}
                         </td>
                         <td>
-                            {# --- NEW: Display Auto Grade --- #}
-                            {% if submission.auto_grade is not none %}
-                                <span class="badge bg-primary">{{ submission.auto_grade }}%</span>
-                            {% else %}
-                                <span class="badge bg-secondary">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {# --- MODIFIED: Renamed to Manual Grade for clarity --- #}
                             {% if submission.grade is not none %}
-                                <span class="badge bg-warning">{{ submission.grade }}% (Override)</span>
+                                <span class="badge bg-warning">{{ submission.grade }}%</span>
                             {% else %}
                                 <span class="badge bg-secondary">N/A</span>
                             {% endif %}
@@ -83,10 +70,7 @@
                                             data-submission-text="{{ submission.submission_text or '' }}"
                                             data-file-path="{{ submission.file_path or '' }}"
                                             data-current-grade="{{ submission.grade or '' }}"
-                                            data-current-feedback="{{ submission.feedback or '' }}"
-                                            data-auto-grade="{{ submission.auto_grade if submission.auto_grade is not none else 'N/A' }}"
-                                            data-auto-feedback="{{ submission.auto_feedback or 'No automated feedback.' }}"
-                                            data-evaluation-output="{{ submission.evaluation_output or 'No output recorded.' }}">
+                                            data-current-feedback="{{ submission.feedback or '' }}">
                                         <i class="fas fa-edit me-1"></i> Grade/View
                                     </button>
                                 {% endif %}
@@ -126,28 +110,15 @@
                         </div>
                     </div>
 
-                    <!-- --- NEW: Section for Auto-Evaluation Results --- -->
-                    <div id="autoGradeInfo" class="alert alert-info">
-                        <h6 class="alert-heading"><i class="fas fa-robot me-2"></i>Automated Evaluation Results</h6>
-                        <p class="mb-1"><strong>Auto-Grade:</strong> <span id="autoGradeValue" class="fw-bold"></span></p>
-                        <p class="mb-1"><strong>Auto-Feedback:</strong> <span id="autoFeedbackValue"></span></p>
-                        <a href="#" data-bs-toggle="collapse" data-bs-target="#collapseOutput" class="small">Show/Hide Raw Output</a>
-                        <div class="collapse mt-2" id="collapseOutput">
-                            <pre class="bg-dark text-white p-2 rounded small" style="max-height: 200px; overflow-y: auto;"><code><span id="evaluationOutputValue"></span></code></pre>
-                        </div>
-                    </div>
-                    
                     <hr>
-                    <h6 class="text-muted">Manual Override</h6>
-                    <p class="small">Use these fields to enter a new grade or provide additional feedback. The Manual Grade will be shown to the student if set.</p>
                     <div class="mb-3">
-                        <label for="grade" class="form-label">Manual Grade (0-100)</label>
-                        <input type="number" class="form-control" id="grade" name="grade" min="0" max="100">
+                        <label for="grade" class="form-label">Grade (0-100)</label>
+                        <input type="number" class="form-control" id="grade" name="grade" min="0" max="100" step="1">
                     </div>
                     
                     <div class="mb-3">
-                        <label for="feedback" class="form-label">Manual Feedback</label>
-                        <textarea class="form-control" id="feedback" name="feedback" rows="3"></textarea>
+                        <label for="feedback" class="form-label">Feedback</label>
+                        <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Provide feedback to the student..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -170,7 +141,7 @@ $(document).ready(function() {
         order: [[1, 'desc']] // Sort by Submitted At descending
     });
 
-    // --- MODIFIED: Event listener for grading modal to populate new fields ---
+    // Event listener for grading modal
     $('#gradeSubmissionModal').on('show.bs.modal', function(event) {
         const button = $(event.relatedTarget);
         const modal = $(this);
@@ -192,15 +163,10 @@ $(document).ready(function() {
         } else {
             fileLinkWrapper.hide();
         }
-        
-        // --- NEW: Populate Auto-Evaluation Section ---
-        modal.find('#autoGradeValue').text(button.data('auto-grade'));
-        modal.find('#autoFeedbackValue').text(button.data('auto-feedback'));
-        modal.find('#evaluationOutputValue').text(button.data('evaluation-output'));
     });
 
+    // Handle grade form submission
     $('#gradeSubmissionForm').on('submit', function(e) {
-        // This form's logic remains the same, as it's for manual overrides.
         e.preventDefault();
         const formData = {
             grade: $('#grade').val(),
@@ -219,6 +185,10 @@ $(document).ready(function() {
             if (data.success) {
                 location.reload();
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while grading the submission');
         });
     });
 });

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: training-management-system
+    env: python
+    buildCommand: |
+      pip uninstall -y $(pip freeze) 2>/dev/null || true
+      pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
