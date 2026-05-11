@@ -1,0 +1,1 @@
+web: gunicorn -w 1 -t 120 --max-requests 100 --max-requests-jitter 10 run:app

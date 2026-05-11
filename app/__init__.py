@@ -54,7 +54,9 @@ def create_app():
     # --- Database Connection Helper ---
     def get_db_connection():
         try:
-            return mysql.connector.connect(**app.config['DB_CONFIG'])
+            conn = mysql.connector.connect(**app.config['DB_CONFIG'])
+            conn.cmd_reset_connection()
+            return conn
         except mysql.connector.Error as err:
             app.logger.error(f"Database connection error: {err}")
             return None
