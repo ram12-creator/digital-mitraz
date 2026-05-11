@@ -29,7 +29,9 @@ xhtml2pdf
 MarkupSafe==3.0.2
 more-itertools==10.8.0
 mysql-connector-python==8.1.0
+openpyxl==3.1.5
 packaging==25.0
+pillow==11.3.0
 prompt_toolkit==3.0.52
 protobuf==4.21.12
 pyparsing==3.0.9
