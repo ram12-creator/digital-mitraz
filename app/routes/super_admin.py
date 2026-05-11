@@ -19,13 +19,7 @@ import json
 
 
 
-# import pandas as pd
-# import matplotlib
-# matplotlib.use('Agg') # Set non-GUI backend
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# import io
-# import base64
+
 
 
 super_admin_bp = Blueprint('super_admin', __name__)
