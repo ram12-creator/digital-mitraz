@@ -1,8 +1,8 @@
 from flask_login import LoginManager
 from flask_mail import Mail
-# from celery import Celery
+# from celery import Celery  # REMOVED - Commented out for Render
 
-# Create the extension instances in a central place
+# Initialize extensions WITHOUT Celery
 login_manager = LoginManager()
 mail = Mail()
-# celery = Celery(__name__)
+# celery = Celery(__name__)  # REMOVED - Commented out for Render

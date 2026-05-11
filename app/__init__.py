@@ -1,4 +1,3 @@
-
 from flask import Flask
 import mysql.connector
 from dotenv import load_dotenv
@@ -36,10 +35,8 @@ def create_app():
         MAIL_USE_TLS=os.getenv('MAIL_USE_TLS', 'True').lower() in ['true', '1', 't'],
         MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
         MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
-        MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER'),
-        # Celery Configuration
-        CELERY_BROKER_URL=os.getenv('CELERY_BROKER_URL'),
-        CELERY_RESULT_BACKEND=os.getenv('CELERY_RESULT_BACKEND')
+        MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
+        # CELERY CONFIGURATION REMOVED FOR RENDER DEPLOYMENT
     )
     
     # Create necessary upload subdirectories if they don't exist
@@ -54,20 +51,12 @@ def create_app():
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
 
-    # --- Configure Celery within the factory ---
-    celery.conf.update(
-        broker_url=app.config['CELERY_BROKER_URL'],
-        result_backend=app.config['CELERY_RESULT_BACKEND']
-    )
-    # This is the crucial line that tells Celery where to find your task definitions
-    celery.conf.imports = ('app.tasks',)
-
-    # This ensures tasks run with the Flask application context
-    class ContextTask(celery.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-    celery.Task = ContextTask
+    # --- CELERY CONFIGURATION COMPLETELY REMOVED ---
+    # The following Celery code has been removed for Render deployment:
+    # - celery.conf.update(...)
+    # - celery.conf.imports
+    # - ContextTask class
+    # - celery.Task assignment
     
     # --- Database Connection Helper ---
     def get_db_connection():
@@ -86,7 +75,7 @@ def create_app():
         from app.routes.trainer import trainer_bp
         from app.routes.student import student_bp
         from app.main import main_bp
-        from app.utils.template_filters import filters_bp # Assuming you have this
+        from app.utils.template_filters import filters_bp
         
         app.register_blueprint(auth_bp)
         app.register_blueprint(super_admin_bp, url_prefix='/super_admin')
