@@ -130,12 +130,10 @@
                                 </a>
 
                                 <!-- 3. Download PDF Report -->
-                                <a href="{{ url_for('admin.download_student_pdf', student_id=student.student_id) }}" 
-                                   class="btn btn-sm btn-light border"
-                                   target="_blank"
-                                   data-bs-toggle="tooltip" title="Download Report">
-                                    <i class="fas fa-file-pdf text-danger"></i>
-                                </a>
+                                <button class="btn btn-sm btn-light border disabled" 
+   data-bs-toggle="tooltip" title="PDF Export Disabled">
+    <i class="fas fa-file-pdf text-danger"></i>
+</button>
                                 
                                 <!-- 4. Request Dropout (Maker-Checker) -->
                                 <button class="btn btn-sm btn-light border" 

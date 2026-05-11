@@ -18,8 +18,8 @@ from xhtml2pdf import pisa
 from io import BytesIO
 from flask import render_template, request, jsonify, url_for, make_response, current_app
 from werkzeug.utils import secure_filename
-from xhtml2pdf import pisa
-from io import BytesIO
+# from xhtml2pdf import pisa
+# from io import BytesIO
 import os
 import json
 import csv
@@ -1619,29 +1619,9 @@ def save_socio():
 # --- ROUTE: PDF Download ---
 @admin_bp.route('/download_student_pdf/<int:student_id>')
 def download_student_pdf(student_id):
-    conn = current_app.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # Fetch all data (Similar to manage_student)
-    cursor.execute("SELECT s.*, u.full_name, u.email, b.batch_name FROM students s JOIN users u ON s.user_id = u.user_id LEFT JOIN batches b ON s.batch_id = b.batch_id WHERE s.student_id = %s", (student_id,))
-    student = cursor.fetchone()
-    cursor.execute("SELECT * FROM student_personal_details WHERE student_id = %s", (student_id,))
-    basic = cursor.fetchone()
-    cursor.execute("SELECT * FROM student_socio_economic WHERE student_id = %s", (student_id,))
-    socio = cursor.fetchone()
-    conn.close()
-
-    html = render_template('admin/pdf_report.html', student=student, basic=basic, socio=socio)
-    pdf_buffer = BytesIO()
-    pisa_status = pisa.CreatePDF(html, dest=pdf_buffer)
-    
-    if pisa_status.err: return "PDF Error"
-    
-    pdf_buffer.seek(0)
-    response = make_response(pdf_buffer.read())
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename={student["full_name"]}_Profile.pdf'
-    return response
+    """PDF export temporarily disabled to optimize deployment"""
+    flash('PDF export feature is currently disabled. Please use CSV export instead.', 'warning')
+    return redirect(url_for('admin.student_management'))
 
 
 
