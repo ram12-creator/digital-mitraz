@@ -24,7 +24,13 @@ def create_app():
             'host': os.getenv('DB_HOST'),
             'database': os.getenv('DB_NAME'),
             'user': os.getenv('DB_USER'),
-            'password': os.getenv('DB_PASSWORD')
+            'password': os.getenv('DB_PASSWORD'),
+            'port': int(os.getenv('DB_PORT', 3306)),
+            'use_pure': True,
+            'connection_timeout': 30,
+            # Aiven MySQL requires SSL - this is the critical fix
+            'ssl_disabled': False,
+            'ssl_ca': '/etc/ssl/certs/ca-certificates.crt'  # Render's CA certificate bundle
         },
         UPLOAD_FOLDER=os.path.join(app.root_path, 'static', 'uploads'),
         ALLOWED_EXTENSIONS={'png', 'jpg', 'jpeg', 'gif'},
@@ -44,22 +50,55 @@ def create_app():
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'submissions'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'documents'), exist_ok=True)
     # REMOVED: test_cases directory (no longer needed for auto-evaluation)
-    # os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'test_cases'), exist_ok=True)
     
     # --- Initialize Extensions with the App ---
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
 
-    # --- Database Connection Helper ---
+    # --- Database Connection Helper with SSL Support ---
     def get_db_connection():
+        """
+        Creates a database connection with SSL enabled for Aiven MySQL.
+        Uses Render's CA certificate bundle for SSL verification.
+        """
         try:
-            conn = mysql.connector.connect(**app.config['DB_CONFIG'])
+            # Get the full DB_CONFIG
+            config = app.config['DB_CONFIG'].copy()
+            
+            # Ensure SSL is properly configured for Aiven
+            config['ssl_disabled'] = False
+            
+            # Use Render's CA certificate bundle if it exists
+            ca_bundle_paths = [
+                '/etc/ssl/certs/ca-certificates.crt',  # Render/Ubuntu
+                '/etc/ssl/cert.pem',                    # macOS/Alternative
+                None                                    # Fallback to system default
+            ]
+            
+            for ca_path in ca_bundle_paths:
+                if ca_path and os.path.exists(ca_path):
+                    config['ssl_ca'] = ca_path
+                    break
+            
+            # Create the connection
+            conn = mysql.connector.connect(**config)
+            
+            # Reset connection for clean state
             conn.cmd_reset_connection()
+            
+            app.logger.info("Database connection established successfully")
             return conn
+            
         except mysql.connector.Error as err:
             app.logger.error(f"Database connection error: {err}")
+            app.logger.error(f"Error code: {err.errno}")
+            app.logger.error(f"Error message: {err.msg}")
             return None
+        except Exception as e:
+            app.logger.error(f"Unexpected database error: {e}")
+            return None
+    
     app.get_db_connection = get_db_connection
 
     # --- Register Blueprints ---
