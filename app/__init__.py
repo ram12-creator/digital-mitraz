@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import os
 
 # Import the extension instances that were created globally
-from .extensions import login_manager, mail, celery
+from .extensions import login_manager, mail
 
 # Load environment variables from .env file
 load_dotenv()
