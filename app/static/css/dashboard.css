@@ -1,0 +1,205 @@
+/* ===================================================================
+   DASHBOARD STYLES - DIGITAL MITRAZ - PREMIUM REDESIGN
+   =================================================================== */
+
+/* --- 1. Enhanced Card Design --- */
+.card {
+    overflow: hidden;
+    position: relative;
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background-color: #fff;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card.border-left-primary,
+.card.border-left-success,
+.card.border-left-info,
+.card.border-left-warning {
+    border-left-width: 5px;
+}
+
+.card.border-left-primary {
+    border-left-color: #3b82f6;
+}
+
+.card.border-left-success {
+    border-left-color: #10b981;
+}
+
+.card.border-left-info {
+    border-left-color: #06b6d4;
+}
+
+.card.border-left-warning {
+    border-left-color: #f59e0b;
+}
+
+/* --- 2. Enhanced Icon Styling --- */
+.card .card-body .fa-2x {
+    position: absolute;
+    right: 15px;
+    bottom: 10px;
+    font-size: 5rem;
+    opacity: 0.08;
+    transform: rotate(-15deg);
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 0;
+}
+
+.card.border-left-primary .fa-2x {
+    color: #3b82f6;
+}
+
+.card.border-left-success .fa-2x {
+    color: #10b981;
+}
+
+.card.border-left-info .fa-2x {
+    color: #06b6d4;
+}
+
+.card.border-left-warning .fa-2x {
+    color: #f59e0b;
+}
+
+.card:hover .fa-2x {
+    transform: rotate(0deg) scale(1.2);
+    opacity: 0.12;
+}
+
+/* --- 3. Enhanced Text Styling --- */
+.card .text-xs {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem !important;
+    color: #6b7280;
+}
+
+.card .h5, .card .h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #1f2937 0%, #4b5563 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* --- 4. Enhanced Chart Container --- */
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(249, 250, 251, 0.5));
+    border-radius: 0.5rem;
+}
+
+/* --- 5. Enhanced Stats Cards --- */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background: #fff;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(90deg, #3b82f6, #14b8a6);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover::before {
+    transform: scaleX(1);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.stat-icon.primary {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.stat-icon.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.stat-icon.info {
+    background: rgba(6, 182, 212, 0.1);
+    color: #06b6d4;
+}
+
+.stat-icon.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+    color: #1f2937;
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.stat-change {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+}
+
+.stat-change.positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.stat-change.negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}

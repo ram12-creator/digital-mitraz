@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}My Assignments{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('student.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Assignments</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">My Assignments</h1>
+        <p class="text-muted">View, download, and submit your course assignments here.</p>
+    </div>
+</div>
+
+<!-- Assignments Table -->
+<div class="card shadow">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Assignment List</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="assignmentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Topic</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Grade</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.title }}</td>
+                        <td>{{ assignment.topic_name }}</td>
+                        <td>{{ assignment.due_date.strftime('%b %d, %Y @ %I:%M %p') }}</td>
+                        <td>
+                            {% if assignment.status == 'Graded' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Graded</span>
+                            {% elif assignment.status == 'Processing' %}
+                                <span class="badge bg-info"><i class="fas fa-spinner fa-spin me-1"></i> Grading in Progress</span>
+                            {% elif assignment.evaluation_status == 'error' %}
+                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i> Evaluation Error</span>
+                            {% elif assignment.status == 'Submitted' %}
+                                <span class="badge bg-primary">Submitted</span>
+                            {% else %}
+                                <span class="badge bg-warning">Pending Submission</span>
+                            {% endif %}
+                             {% if assignment.is_late %}<span class="badge bg-danger ms-1">Late</span>{% endif %}
+                        </td>
+                        <td>
+                            {% set final_grade = assignment.grade if assignment.grade is not none else assignment.auto_grade %}
+                            {% if final_grade is not none %}
+                            <span class="badge bg-{{ 'success' if final_grade >= 80 else 'warning' if final_grade >= 60 else 'danger' }}">
+                                {{ final_grade }}%
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if assignment.evaluation_status != 'processing' %}
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" 
+                                        data-bs-target="#submitAssignmentModal" 
+                                        data-assignment-id="{{ assignment.assignment_id }}"
+                                        data-title="{{ assignment.title }}" 
+                                        data-student-comments="{{ assignment.submission_text or '' }}"
+                                        data-bs-toggle="tooltip" title="Submit or Update">
+                                    <i class="fas fa-upload"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if assignment.file_path %}
+                                <a href="{{ url_for('static', filename=assignment.file_path) }}" class="btn btn-outline-success" download data-bs-toggle="tooltip" title="Download Assignment">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                {% endif %}
+                                
+                                {% if assignment.status == 'Graded' %}
+                                <button class="btn btn-outline-dark" data-bs-toggle="modal" 
+                                        data-bs-target="#viewFeedbackModal" 
+                                        data-title="{{ assignment.title }}"
+                                        data-final-grade="{{ final_grade }}"
+                                        data-manual-feedback="{{ assignment.feedback or '' }}"
+                                        data-auto-feedback="{{ assignment.auto_feedback or '' }}"
+                                        data-bs-toggle="tooltip" title="View Feedback">
+                                    <i class="fas fa-comment-dots"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Assignment Modal -->
+<div class="modal fade" id="submitAssignmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Submit Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="submitAssignmentForm" enctype="multipart/form-data">
+                <input type="hidden" id="assignmentId" name="assignment_id">
+                <div class="modal-body">
+                    <h6 id="assignmentTitle" class="mb-3 text-primary"></h6>
+                    
+                    <div class="mb-3">
+                        <label for="studentComments" class="form-label">Comments (Optional)</label>
+                        <textarea class="form-control" id="studentComments" name="student_comments" rows="3" placeholder="Add any comments for your trainer..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="submissionFile" class="form-label">Upload Your Solution File *</label>
+                        <input type="file" class="form-control" id="submissionFile" name="submission_file" required>
+                        <div class="form-text">Allowed types: .py, .sql, .xlsx, .zip, etc.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Feedback Modal -->
+<div class="modal fade" id="viewFeedbackModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assignment Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="feedbackTitle" class="mb-3 text-primary"></h6>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Your Final Grade:</label>
+                    <div><span class="badge fs-5" id="feedbackGrade"></span></div>
+                </div>
+                <div class="mb-3" id="manualFeedbackSection" style="display: none;">
+                    <label class="form-label fw-bold">Trainer's Feedback:</label>
+                    <div class="p-3 bg-light rounded border" id="manualFeedbackContent"></div>
+                </div>
+                <div class="mb-3" id="autoFeedbackSection" style="display: none;">
+                    <label class="form-label fw-bold">Automated Feedback:</label>
+                    <div class="p-3 bg-light rounded border" id="autoFeedbackContent" style="white-space: pre-wrap;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#assignmentsTable').DataTable({ responsive: true, order: [[2, 'desc']] });
+
+    // Populate the submission modal with existing comments if any
+    $('#submitAssignmentModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        const modal = $(this);
+        modal.find('#assignmentId').val(button.data('assignment-id'));
+        modal.find('#assignmentTitle').text('Submit: ' + button.data('title'));
+        // Load existing student comments into the textarea
+        modal.find('#studentComments').val(button.data('student-comments'));
+    });
+
+    // Populate the feedback modal
+    $('#viewFeedbackModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        const modal = $(this);
+        const grade = button.data('final-grade');
+        const manualFeedback = button.data('manual-feedback');
+        const autoFeedback = button.data('auto-feedback');
+        
+        modal.find('#feedbackTitle').text('Feedback for: ' + button.data('title'));
+        const gradeBadge = modal.find('#feedbackGrade');
+        gradeBadge.text(grade + '%').removeClass('bg-success bg-warning bg-danger').addClass(
+            grade >= 80 ? 'bg-success' : grade >= 60 ? 'bg-warning' : 'bg-danger'
+        );
+        
+        if (manualFeedback) {
+            modal.find('#manualFeedbackContent').text(manualFeedback);
+            modal.find('#manualFeedbackSection').show();
+        } else {
+            modal.find('#manualFeedbackSection').hide();
+        }
+
+        if (autoFeedback) {
+            modal.find('#autoFeedbackContent').text(autoFeedback);
+            modal.find('#autoFeedbackSection').show();
+        } else {
+            modal.find('#autoFeedbackSection').hide();
+        }
+    });
+
+    // Handle form submission
+    $('#submitAssignmentForm').on('submit', async function(e) {
+        e.preventDefault();
+        const form = this;
+        const submitButton = $(form).find('button[type="submit"]');
+        if (!form.checkValidity()) {
+            alert('Please select a file to submit.');
+            return;
+        }
+        submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Submitting...');
+        
+        const formData = new FormData(form);
+        const assignmentId = $('#assignmentId').val();
+
+        try {
+            const response = await fetch(`/student/submit_assignment/${assignmentId}`, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            alert(result.message);
+            if (result.success) {
+                location.reload();
+            }
+        } catch (error) {
+            alert('A network error occurred.');
+        } finally {
+            submitButton.prop('disabled', false).html('Submit Assignment');
+        }
+    });
+});
+</script>
+{% endblock %}

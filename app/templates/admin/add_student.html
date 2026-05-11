@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Manage Beneficiary' if mode == 'edit' else 'New Enrollment' }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- HEADER -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="text-dark fw-bold m-0">
+                    {% if mode == 'edit' %}
+                        <i class="fas fa-user-edit text-primary me-2"></i>Manage Profile: {{ basic.first_name }} {{ basic.last_name }}
+                    {% else %}
+                        <i class="fas fa-user-plus text-success me-2"></i>New Enrollment
+                    {% endif %}
+                </h4>
+                <p class="text-muted small mb-0">Complete the tabs sequentially to enroll the beneficiary.</p>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('admin.student_management') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
+                {% if mode == 'edit' %}
+                <a href="{{ url_for('admin.download_student_pdf', student_id=student_id) }}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-file-pdf me-2"></i> Download PDF
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- TABS HEADER -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-header bg-dark text-white p-0">
+                <ul class="nav nav-tabs card-header-tabs" id="enrollmentTabs" role="tablist" style="border-bottom: none;">
+                    {% set state = '' if mode == 'edit' else 'disabled' %}
+                    <li class="nav-item"><button class="nav-link active text-white fw-bold" id="tab-basic" data-bs-toggle="tab" data-bs-target="#pane-basic" type="button">1. BASIC</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-socio" data-bs-toggle="tab" data-bs-target="#pane-socio" type="button">2. SOCIO</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-education" data-bs-toggle="tab" data-bs-target="#pane-education" type="button">3. EDUCATION</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-family" data-bs-toggle="tab" data-bs-target="#pane-family" type="button">4. FAMILY</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-experience" data-bs-toggle="tab" data-bs-target="#pane-experience" type="button">5. EXPERIENCE</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-counselling" data-bs-toggle="tab" data-bs-target="#pane-counselling" type="button">6. COUNSELLING</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-docs" data-bs-toggle="tab" data-bs-target="#pane-docs" type="button">7. DOCS</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-placement" data-bs-toggle="tab" data-bs-target="#pane-placement" type="button">8. PLACEMENT</button></li>
+                    <li class="nav-item"><button class="nav-link text-white {{state}}" id="tab-enroll" data-bs-toggle="tab" data-bs-target="#pane-enroll" type="button">9. ENROLL</button></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card shadow border-0" style="min-height: 600px;">
+            <div class="card-body p-4">
+                <div class="tab-content">
+                    
+                    <!-- 1. BASIC DETAILS -->
+                    <div class="tab-pane fade show active" id="pane-basic">
+                        <form id="formBasic">
+                            <input type="hidden" name="student_id" id="hiddenStudentId" value="{{ student_id if student_id else '' }}">
+                            
+                            <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Identity Details</h6>
+                            <div class="row g-3 mb-3 align-items-center">
+                                <!-- 1. Profile Photo Column -->
+    <div class="col-md-2 text-center">
+        <div class="mb-2">
+            <!-- Preview Logic: Show existing photo if editing, else placeholder -->
+            {% if student and student.profile_picture %}
+                <img src="{{ url_for('static', filename='uploads/profile_pictures/' + student.profile_picture) }}" 
+                     class="rounded-circle border shadow-sm" 
+                     style="width: 100px; height: 100px; object-fit: cover;">
+            {% else %}
+                <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center mx-auto shadow-sm" 
+                     style="width: 100px; height: 100px;">
+                    <i class="fas fa-camera text-secondary fa-2x"></i>
+                </div>
+            {% endif %}
+        </div>
+        <label class="btn btn-sm btn-outline-secondary w-100" style="font-size: 0.75rem;">
+            Upload Photo <input type="file" name="profile_photo" accept="image/*" style="display: none;">
+        </label>
+    </div>
+                                <div class="col-md-4">
+                                    <label class="small text-muted">Aadhar Number *</label>
+                                    <input type="text" class="form-control" name="aadhar" value="{{ basic.aadhar_number or '' }}" required pattern="[0-9]{12}" title="12 digit Aadhar">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="small text-muted">Salutation</label>
+                                    <select class="form-select" name="salutation">
+                                        <option value="Mr." {% if basic.salutation == 'Mr.' %}selected{% endif %}>Mr.</option>
+                                        <option value="Ms." {% if basic.salutation == 'Ms.' %}selected{% endif %}>Ms.</option>
+                                        <option value="Mrs." {% if basic.salutation == 'Mrs.' %}selected{% endif %}>Mrs.</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">First Name *</label><input type="text" class="form-control" name="first_name" value="{{ basic.first_name or '' }}" required></div>
+                                <!-- <div class="col-md-3"><label class="small text-muted">Middle Name</label><input type="text" class="form-control" name="middle_name" value="{{ basic.middle_name or '' }}"></div> -->
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4"><label class="small text-muted">Last Name *</label><input type="text" class="form-control" name="last_name" value="{{ basic.last_name or '' }}" required></div>
+                                <div class="col-md-4"><label class="small text-muted">Date of Birth *</label><input type="date" class="form-control" name="dob" value="{{ basic.dob or '' }}" required></div>
+                                <div class="col-md-4"><label class="small text-muted">Blood Group</label>
+                                    <select class="form-select" name="blood_group">
+                                        <option value="">Select...</option>
+                                        {% for bg in ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'] %}
+                                            <option value="{{ bg }}" {% if basic.blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3"><label class="small text-muted">Gender *</label>
+                                    <select class="form-select" name="gender" required>
+                                        <option value="Male" {% if basic.gender == 'Male' %}selected{% endif %}>Male</option>
+                                        <option value="Female" {% if basic.gender == 'Female' %}selected{% endif %}>Female</option>
+                                        <option value="Other" {% if basic.gender == 'Other' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">Marital Status</label>
+                                    <select class="form-select" name="marital_status" id="maritalStatusSelect" onchange="toggleMarriedFields()">
+                                        <option value="Single" {% if basic.marital_status == 'Single' %}selected{% endif %}>Single</option>
+                                        <option value="Married" {% if basic.marital_status == 'Married' %}selected{% endif %}>Married</option>
+                                        <option value="Divorced" {% if basic.marital_status == 'Divorced' %}selected{% endif %}>Divorced</option>
+                                        <option value="Widowed" {% if basic.marital_status == 'Widowed' %}selected{% endif %}>Widowed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">Category</label>
+                                    <select class="form-select" name="category">
+                                        {% for cat in ['General', 'OBC', 'SC', 'ST', 'EWS'] %}
+                                            <option value="{{ cat }}" {% if basic.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">Religion</label>
+                                    <select class="form-select" name="religion">
+                                        {% for rel in ['Hindu', 'Muslim', 'Christian', 'Sikh', 'Buddhist', 'Other'] %}
+                                            <option value="{{ rel }}" {% if basic.religion == rel %}selected{% endif %}>{{ rel }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden Married Fields -->
+                            <div class="row g-3 mb-3 married-field" style="display: none;">
+                                <div class="col-md-6">
+                                    <label class="small text-muted fw-bold">Spouse Name</label>
+                                    <input type="text" class="form-control bg-light" name="spouse_name" value="{{ basic.spouse_name or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small text-muted fw-bold">No. of Children</label>
+                                    <input type="number" class="form-control bg-light" name="children_count" value="{{ basic.children_count or 0 }}">
+                                </div>
+                            </div>
+
+                            <h6 class="border-bottom pb-2 mb-3 mt-4 text-muted fw-bold text-uppercase">Source & Status</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3"><label class="small text-muted">Mobilization Channel</label>
+                                    <select class="form-select" name="mobilization_channel">
+                                        {% for chan in ['Walk-in', 'Referral', 'Campaign', 'Social Media', 'NGO Partner'] %}
+                                            <option value="{{ chan }}" {% if basic.mobilization_channel == chan %}selected{% endif %}>{{ chan }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">Referred By</label><input type="text" class="form-control" name="refered_by" value="{{ basic.refered_by or '' }}"></div>
+                                <div class="col-md-3"><label class="small text-muted">Physically Challenged?</label>
+                                    <select class="form-select" name="physically_challenged">
+                                        <option value="0" {% if basic.is_physically_challenged == 0 %}selected{% endif %}>No</option>
+                                        <option value="1" {% if basic.is_physically_challenged == 1 %}selected{% endif %}>Yes</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">BPL Status</label>
+                                    <select class="form-select" name="bpl_status">
+                                        <option value="No" {% if basic.bpl_status == 'No' %}selected{% endif %}>No</option>
+                                        <option value="Yes" {% if basic.bpl_status == 'Yes' %}selected{% endif %}>Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <h6 class="border-bottom pb-2 mb-3 mt-4 text-muted fw-bold text-uppercase">Address & Contact</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <div class="card bg-light border-0 p-3 h-100">
+                                        <label class="form-label fw-bold mb-2">Present Address</label>
+                                        <input type="text" class="form-control mb-2" name="present_address1" placeholder="Address Line 1" value="{{ basic.current_address or '' }}">
+                                        <div class="row g-2">
+                                            <div class="col-6"><input type="text" class="form-control" name="present_city" placeholder="City/Village" value="{{ basic.city or '' }}"></div>
+                                            <div class="col-6"><input type="text" class="form-control" name="present_pincode" placeholder="Pincode" value="{{ basic.pincode or '' }}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light border-0 p-3 h-100">
+                                        <label class="form-label fw-bold mb-2">Permanent Address</label>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="sameAddress">
+                                            <label class="form-check-label small" for="sameAddress">Same as Present Address?</label>
+                                        </div>
+                                        <input type="text" class="form-control mb-2" name="perm_address1" placeholder="Address Line 1" value="{{ basic.permanent_address or '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="small text-muted">Phone *</label><input type="tel" class="form-control" name="phone" value="{{ basic.primary_phone or '' }}" required></div>
+                                <div class="col-md-6"><label class="small text-muted">Email *</label><input type="email" class="form-control" name="email" value="{{ basic.primary_email or '' }}" required></div>
+                            </div>
+
+                            <div class="text-end mt-4">
+                                <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" id="btnSaveBasic">
+                                    {{ 'UPDATE BASIC DETAILS' if mode == 'edit' else 'SAVE & NEXT' }} <i class="fas fa-angle-right ms-2"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 2. SOCIO-ECONOMIC -->
+                    <div class="tab-pane fade" id="pane-socio">
+                        <form id="formSocio">
+                            <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Household & Living</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3"><label class="small text-muted">Housing</label>
+                                    <select class="form-select" name="housing_type">
+                                        <option value="Owned" {% if socio.housing_type == 'Owned' %}selected{% endif %}>Owned</option>
+                                        <option value="Rented" {% if socio.housing_type == 'Rented' %}selected{% endif %}>Rented</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">Condition</label>
+                                    <select class="form-select" name="housing_condition">
+                                        <option value="Pucca" {% if socio.housing_condition == 'Pucca' %}selected{% endif %}>Pucca (Concrete)</option>
+                                        <option value="Kutcha" {% if socio.housing_condition == 'Kutcha' %}selected{% endif %}>Kutcha (Mud)</option>
+                                        <option value="Semi-Pucca" {% if socio.housing_condition == 'Semi-Pucca' %}selected{% endif %}>Semi-Pucca</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3"><label class="small text-muted">No. of Rooms</label><input type="number" class="form-control" name="room_count" value="{{ socio.room_count or '' }}"></div>
+                                <div class="col-md-3"><label class="small text-muted">Total Members</label><input type="number" class="form-control" name="family_members_count" value="{{ socio.family_members_count or '' }}"></div>
+                            </div>
+
+                            <h6 class="border-bottom pb-2 mb-3 mt-4 text-muted fw-bold text-uppercase">Rural Indicators</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4"><label class="small text-muted">Lighting</label>
+                                    <select class="form-select" name="lighting_source">
+                                        <option value="Electricity" {% if socio.lighting_source == 'Electricity' %}selected{% endif %}>Electricity</option>
+                                        <option value="Kerosene" {% if socio.lighting_source == 'Kerosene' %}selected{% endif %}>Kerosene</option>
+                                        <option value="Solar" {% if socio.lighting_source == 'Solar' %}selected{% endif %}>Solar</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4"><label class="small text-muted">Cooking Fuel</label>
+                                    <select class="form-select" name="cooking_fuel">
+                                        <option value="Gas" {% if socio.cooking_fuel == 'Gas' %}selected{% endif %}>Gas (LPG)</option>
+                                        <option value="Wood" {% if socio.cooking_fuel == 'Wood' %}selected{% endif %}>Wood</option>
+                                        <option value="Electric" {% if socio.cooking_fuel == 'Electric' %}selected{% endif %}>Electric</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4"><label class="small text-muted">Water Source</label>
+                                    <select class="form-select" name="water_source">
+                                        <option value="Piped Water" {% if socio.water_source == 'Piped Water' %}selected{% endif %}>Piped Water</option>
+                                        <option value="Hand Pump" {% if socio.water_source == 'Hand Pump' %}selected{% endif %}>Hand Pump</option>
+                                        <option value="Well" {% if socio.water_source == 'Well' %}selected{% endif %}>Well</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold">Assets Owned</label>
+                                <div class="d-flex flex-wrap gap-4 bg-light p-3 rounded">
+                                    {% set assets = socio.household_assets or '' %}
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="assets" value="TV" {% if 'TV' in assets %}checked{% endif %}> TV</div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="assets" value="Fridge" {% if 'Fridge' in assets %}checked{% endif %}> Refrigerator</div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="assets" value="Smartphone" {% if 'Smartphone' in assets %}checked{% endif %}> Smartphone</div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="assets" value="Bike" {% if 'Bike' in assets %}checked{% endif %}> Bike</div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="assets" value="AgriLand" {% if 'AgriLand' in assets %}checked{% endif %}> Agri Land</div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="button" class="btn btn-primary rounded-0 px-4" onclick="submitSocio()">
+                                    {{ 'UPDATE SOCIO' if mode == 'edit' else 'SAVE & NEXT' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 3. EDUCATION -->
+                    <div class="tab-pane fade" id="pane-education">
+                        <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Academic History</h6>
+                        <table class="table table-bordered table-sm" id="eduTable">
+                            <thead class="table-light"><tr><th>Qualification</th><th>Institute</th><th>Year</th><th>Spec.</th><th>%</th><th>Action</th></tr></thead>
+                            <tbody>
+                                {% if education %}
+                                    {% for edu in education %}
+                                    <tr>
+                                        <td><select class="form-select form-select-sm edu-level"><option value="{{ edu.qualification_level }}" selected>{{ edu.qualification_level }}</option></select></td>
+                                        <td><input type="text" class="form-control form-control-sm edu-inst" value="{{ edu.institute_name }}"></td>
+                                        <td><input type="number" class="form-control form-control-sm edu-year" value="{{ edu.passing_year }}"></td>
+                                        <td><input type="text" class="form-control form-control-sm edu-spec" value="{{ edu.specialization }}"></td>
+                                        <td><input type="number" class="form-control form-control-sm edu-perc" value="{{ edu.percentage }}"></td>
+                                        <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        <button class="btn btn-sm btn-outline-primary rounded-0" onclick="addEduRow()"><i class="fas fa-plus"></i> ADD ROW</button>
+                        <div class="text-end mt-4"><button type="button" class="btn btn-primary rounded-0 px-4" onclick="submitEducation()">SAVE & NEXT</button></div>
+                    </div>
+
+                    <!-- 4. FAMILY -->
+                    <div class="tab-pane fade" id="pane-family">
+                        <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Family Members</h6>
+                        <table class="table table-bordered table-sm" id="familyTable">
+                            <thead class="table-light"><tr><th>Name</th><th>Relationship</th><th>Occupation</th><th>Income</th><th>Action</th></tr></thead>
+                            <tbody>
+                                {% if family %}
+                                    {% for fam in family %}
+                                    <tr>
+                                        <td><input type="text" class="form-control form-control-sm fam-name" value="{{ fam.name }}"></td>
+                                        <td><select class="form-select form-select-sm fam-rel"><option value="{{ fam.relationship }}" selected>{{ fam.relationship }}</option></select></td>
+                                        <td><input type="text" class="form-control form-control-sm fam-occ" value="{{ fam.occupation }}"></td>
+                                        <td><input type="number" class="form-control form-control-sm fam-inc" value="{{ fam.income }}"></td>
+                                        <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        <button class="btn btn-sm btn-outline-primary rounded-0" onclick="addFamilyRow()"><i class="fas fa-plus"></i> ADD MEMBER</button>
+                        <div class="text-end mt-4"><button type="button" class="btn btn-primary rounded-0 px-4" onclick="submitFamily()">SAVE & NEXT</button></div>
+                    </div>
+
+                    <!-- 5. EXPERIENCE -->
+                    <div class="tab-pane fade" id="pane-experience">
+                        <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Work Experience</h6>
+                        <div class="mb-4">
+                            <label class="form-label me-3 fw-bold">Status:</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="exp_status" id="fresher" value="fresher" {% if not experience or experience.exp_type == 'Fresher' %}checked{% endif %}>
+                                <label class="form-check-label" for="fresher">Fresher</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="exp_status" id="experienced" value="experienced" {% if experience and experience.exp_type == 'Experienced' %}checked{% endif %}>
+                                <label class="form-check-label" for="experienced">Experienced</label>
+                            </div>
+                        </div>
+                        <div id="expFields" style="display: {{ 'block' if experience and experience.exp_type == 'Experienced' else 'none' }};">
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="small text-muted">Employer</label><input type="text" class="form-control" id="exp_employer" value="{{ experience.employer_name or '' }}"></div>
+                                <div class="col-md-6"><label class="small text-muted">Designation</label><input type="text" class="form-control" id="exp_designation" value="{{ experience.designation or '' }}"></div>
+                                <div class="col-md-4"><label class="small text-muted">Salary</label><input type="number" class="form-control" id="exp_salary" value="{{ experience.salary or '' }}"></div>
+                            </div>
+                        </div>
+                        <div class="text-end mt-4"><button type="button" class="btn btn-primary rounded-0 px-4" onclick="submitExperience()">SAVE & NEXT</button></div>
+                    </div>
+
+                    <!-- 6. COUNSELLING -->
+                    <div class="tab-pane fade" id="pane-counselling">
+                        <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Counselling</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6"><label class="small text-muted">Status</label>
+                                <select class="form-select" id="counselStatus">
+                                    <option value="Interested" {% if counselling.status == 'Interested' %}selected{% endif %}>Interested</option>
+                                    <option value="Shortlisted" {% if counselling.status == 'Shortlisted' %}selected{% endif %}>Shortlisted</option>
+                                    <option value="Not Interested" {% if counselling.status == 'Not Interested' %}selected{% endif %}>Not Interested/Rejected</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6"><label class="small text-muted">Rating</label>
+                                <select class="form-select" id="counselRating">
+                                    <option value="Strong Positive" {% if counselling.counsellor_rating == 'Strong Positive' %}selected{% endif %}>Strong Positive</option>
+                                    <option value="Positive" {% if counselling.counsellor_rating == 'Positive' %}selected{% endif %}>Positive</option>
+                                    <option value="Neutral" {% if counselling.counsellor_rating == 'Neutral' %}selected{% endif %}>Neutral</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6"><label class="small text-muted">Interest Inventory</label><input type="text" class="form-control" id="interestInv" value="{{ counselling.interest_inventory or '' }}"></div>
+                            <div class="col-12"><label class="small text-muted">Comments</label><textarea class="form-control" rows="3" id="counselComments">{{ counselling.counsellor_1_comments or '' }}</textarea></div>
+                        </div>
+                        <div class="text-end"><button type="button" class="btn btn-primary rounded-0" onclick="submitCounselling()">UPDATE COUNSELLING</button></div>
+                    </div>
+
+                    <!-- 7. DOCUMENTS -->
+                    <div class="tab-pane fade" id="pane-docs">
+                        <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Upload Documents</h6>
+                        <div class="row g-3 align-items-end mb-4 bg-light p-3 rounded">
+                            <div class="col-md-4"><label class="small text-muted">Category</label>
+                                <select class="form-select" id="docCategory" onchange="updateProofOptions()">
+                                    <option value="">Select Category...</option>
+                                    <option value="identity">Identity Proof</option>
+                                    <option value="education">Education Proof</option>
+                                    <option value="photo">Photo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4"><label class="small text-muted">Type</label><select class="form-select" id="docType" disabled><option>Select Type...</option></select></div>
+                            <div class="col-md-3"><label class="small text-muted">File</label><input type="file" class="form-control" id="docFile"></div>
+                            <div class="col-md-1"><button type="button" class="btn btn-secondary w-100" onclick="uploadDocument()">Upload</button></div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" id="docTable">
+                                <thead class="table-dark"><tr><th>Type</th><th>File</th><th>Action</th></tr></thead>
+                                <tbody>
+                                    {% if documents %}
+                                        {% for doc in documents %}
+                                        <tr><td>{{ doc.doc_type }}</td><td><a href="{{ url_for('static', filename=doc.file_path) }}" target="_blank">View</a></td><td><button class="btn btn-sm btn-danger" onclick="deleteDocument(this, {{ doc.id }})">X</button></td></tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-4"><button type="button" class="btn btn-primary rounded-0 px-4" onclick="nextTab('tab-placement')">NEXT</button></div>
+                    </div>
+
+                    <!-- 8. PLACEMENT -->
+                    <div class="tab-pane fade" id="pane-placement">
+                        <h6 class="border-bottom pb-2 mb-3 text-muted fw-bold text-uppercase">Placement Info</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6"><label class="small text-muted">Status</label>
+                                <select class="form-select" id="interviewStatus">
+                                    <option value="Pending" {% if placement.interview_status == 'Pending' %}selected{% endif %}>Pending</option>
+                                    <option value="Selected" {% if placement.interview_status == 'Selected' %}selected{% endif %}>Selected</option>
+                                </select>
+                            </div>
+                            <div class="col-12"><label class="small text-muted">Remarks</label><textarea class="form-control" rows="4" id="placementRemarks">{{ placement.remarks or '' }}</textarea></div>
+                        </div>
+                        <div class="text-end"><button type="button" class="btn btn-primary rounded-0 px-4" onclick="submitPlacement()">SAVE & NEXT</button></div>
+                    </div>
+
+                    <!-- 9. ENROLLMENT -->
+                    <div class="tab-pane fade" id="pane-enroll">
+                        <div class="text-center p-5 border rounded bg-light">
+                            <h4 class="fw-bold">Final Course Enrollment</h4>
+                            <p class="text-muted">Current Batch: <strong>{{ student.batch_name if student and student.batch_name else 'Not Assigned' }}</strong></p>
+                            <div class="row justify-content-center mt-4">
+                                <div class="col-md-5">
+                                    <label class="form-label text-start w-100 fw-bold">Select Batch</label>
+                                    <select class="form-select mb-4" id="finalBatchId">
+                                        <option value="">-- Choose Active Batch --</option>
+                                        {% for batch in batches %}
+                                        <option value="{{ batch.batch_id }}" {% if student and student.batch_id == batch.batch_id %}selected{% endif %}>{{ batch.batch_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-success w-100 py-2 fw-bold" onclick="finalizeAdmission()">
+                                        <i class="fas fa-check-circle me-2"></i> {{ 'UPDATE ENROLLMENT' if mode == 'edit' else 'CONFIRM ENROLLMENT' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // --- SAFE INITIALIZATION ---
+    let globalStudentId = Number("{{ student_id if student_id else '' }}") || null;
+    const mode = "{{ mode }}"; 
+
+    // --- MARITAL STATUS TOGGLE ---
+    function toggleMarriedFields() {
+        const status = document.getElementById('maritalStatusSelect').value;
+        const fields = document.querySelectorAll('.married-field');
+        fields.forEach(f => f.style.display = (status === 'Married' || status === 'Widowed' || status === 'Divorced') ? 'flex' : 'none');
+    }
+    document.addEventListener('DOMContentLoaded', toggleMarriedFields);
+    document.getElementById('maritalStatusSelect')?.addEventListener('change', toggleMarriedFields);
+
+    // --- TAB SYSTEM ---
+    function nextTab(tabId) {
+        if(mode !== 'edit') document.getElementById(tabId).classList.remove('disabled');
+        const triggerEl = document.querySelector('#' + tabId);
+        const tab = new bootstrap.Tab(triggerEl);
+        tab.show();
+        window.scrollTo(0, 0);
+    }
+
+    // --- 1. BASIC DETAILS ---
+    document.getElementById('formBasic').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
+        btn.innerHTML = 'Saving...'; btn.disabled = true;
+        
+        const formData = new FormData(this);
+        if (globalStudentId) formData.append('student_id', globalStudentId);
+        
+        try {
+            const response = await fetch('/admin/api/save_basic_details', { method: 'POST', body: formData });
+            const res = await response.json();
+            if(res.success) {
+                globalStudentId = res.student_id;
+                document.getElementById('hiddenStudentId').value = globalStudentId;
+                if(mode !== 'edit') nextTab('tab-socio'); else alert("Updated Successfully");
+            } else { alert('Error: ' + res.message); }
+        } catch(e) { console.error(e); }
+        btn.innerHTML = 'SAVE & NEXT'; btn.disabled = false;
+    });
+
+    // --- ADDRESS COPY ---
+    document.getElementById('sameAddress')?.addEventListener('change', function() {
+        if(this.checked) {
+            document.querySelector('[name="perm_address1"]').value = document.querySelector('[name="present_address1"]').value;
+            document.querySelector('[name="perm_city"]').value = document.querySelector('[name="present_city"]').value;
+            document.querySelector('[name="perm_pincode"]').value = document.querySelector('[name="present_pincode"]').value;
+        } else {
+            document.querySelector('[name="perm_address1"]').value = '';
+        }
+    });
+
+    // --- 2. SOCIO ---
+    async function submitSocio() {
+        if(!globalStudentId) return alert("Save Basic Details First");
+        const form = document.getElementById('formSocio');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        data.student_id = globalStudentId;
+        data.assets = Array.from(document.querySelectorAll('input[name="assets"]:checked')).map(el => el.value);
+        const response = await fetch('/admin/api/save_socio', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if((await response.json()).success) if(mode !== 'edit') nextTab('tab-education'); else alert("Saved!");
+    }
+
+    // --- 3. EDUCATION ---
+    function addEduRow() { document.querySelector('#eduTable tbody').insertAdjacentHTML('beforeend', `<tr><td><select class="form-select form-select-sm edu-level"><option>10th</option><option>12th</option><option>Degree</option></select></td><td><input class="form-control form-control-sm edu-inst"></td><td><input class="form-control form-control-sm edu-year"></td><td><input class="form-control form-control-sm edu-spec"></td><td><input class="form-control form-control-sm edu-perc"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button></td></tr>`); }
+    async function submitEducation() {
+        const rows = document.querySelectorAll('#eduTable tbody tr');
+        const data = Array.from(rows).map(row => ({
+            level: row.querySelector('.edu-level').value, institute: row.querySelector('.edu-inst').value, year: row.querySelector('.edu-year').value, specialization: row.querySelector('.edu-spec').value, percentage: row.querySelector('.edu-perc').value
+        }));
+        await fetch('/admin/api/save_education', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ student_id: globalStudentId, qualifications: data }) });
+        if(mode !== 'edit') nextTab('tab-family'); else alert("Saved!");
+    }
+
+    // --- 4. FAMILY ---
+    function addFamilyRow() { document.querySelector('#familyTable tbody').insertAdjacentHTML('beforeend', `<tr><td><input class="form-control form-control-sm fam-name"></td><td><select class="form-select form-select-sm fam-rel"><option>Father</option><option>Mother</option><option>Spouse</option><option>Sibling</option></select></td><td><input class="form-control form-control-sm fam-occ"></td><td><input class="form-control form-control-sm fam-inc"></td><td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button></td></tr>`); }
+    async function submitFamily() {
+        const rows = document.querySelectorAll('#familyTable tbody tr');
+        const data = Array.from(rows).map(row => ({
+            name: row.querySelector('.fam-name').value, relationship: row.querySelector('.fam-rel').value, occupation: row.querySelector('.fam-occ').value, income: row.querySelector('.fam-inc').value
+        }));
+        await fetch('/admin/api/save_family_details', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ student_id: globalStudentId, members: data }) });
+        if(mode !== 'edit') nextTab('tab-experience'); else alert("Saved!");
+    }
+
+    // --- 5. EXPERIENCE ---
+    document.querySelectorAll('input[name="exp_status"]').forEach(r => { r.addEventListener('change', function() { document.getElementById('expFields').style.display = this.value === 'experienced' ? 'block' : 'none'; }); });
+    async function submitExperience() {
+        const isFresher = document.getElementById('fresher').checked;
+        const data = { student_id: globalStudentId, exp_type: isFresher ? 'Fresher' : 'Experienced', employer: document.getElementById('exp_employer').value, designation: document.getElementById('exp_designation').value, salary: document.getElementById('exp_salary').value };
+        await fetch('/admin/api/save_experience', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if(mode !== 'edit') nextTab('tab-counselling'); else alert("Saved!");
+    }
+
+    // --- 6. COUNSELLING ---
+    async function submitCounselling() {
+        const data = { student_id: globalStudentId, interest: document.getElementById('interestInv').value, status: document.getElementById('counselStatus').value, rating: document.getElementById('counselRating').value, comments: document.getElementById('counselComments').value };
+        await fetch('/admin/api/save_counselling', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if(mode !== 'edit') nextTab('tab-docs'); else alert("Saved!");
+    }
+
+    // --- 7. DOCUMENTS (No Reload) ---
+    function updateProofOptions() {
+        const category = document.getElementById('docCategory').value;
+        const proofSelect = document.getElementById('docType');
+        proofSelect.innerHTML = '<option value="">Select Proof...</option>'; proofSelect.disabled = false;
+        const options = { 'identity': ['Aadhar', 'Voter ID'], 'education': ['10th Marksheet'], 'photo': ['Photo'] };
+        if(options[category]) options[category].forEach(opt => proofSelect.innerHTML += `<option value="${opt}">${opt}</option>`);
+    }
+    async function uploadDocument() {
+        if(!globalStudentId) return alert("Error: No Student ID");
+        const docType = document.getElementById('docType').value; const fileInput = document.getElementById('docFile');
+        if(!docType || !fileInput.files[0]) return alert("Select File");
+        const formData = new FormData(); formData.append('student_id', globalStudentId); formData.append('doc_type', docType); formData.append('file', fileInput.files[0]);
+        const response = await fetch('/admin/api/upload_document', { method: 'POST', body: formData });
+        if((await response.json()).success) {
+            document.querySelector('#docTable tbody').insertAdjacentHTML('beforeend', `<tr><td>${docType}</td><td>File Uploaded</td><td><button class="btn btn-sm btn-danger">X</button></td></tr>`);
+        }
+    }
+
+    // --- 8. PLACEMENT ---
+    async function submitPlacement() {
+        const data = { student_id: globalStudentId, status: document.getElementById('interviewStatus').value, remarks: document.getElementById('placementRemarks').value };
+        await fetch('/admin/api/save_placement', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if(mode !== 'edit') nextTab('tab-enroll'); else alert("Saved!");
+    }
+
+    // --- 9. FINALIZE ---
+    async function finalizeAdmission() {
+        const batchId = document.getElementById('finalBatchId').value;
+        if(!batchId) return alert("Select Batch");
+        const response = await fetch('/admin/api/finalize_enrollment', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ student_id: globalStudentId, batch_id: batchId }) });
+        if((await response.json()).success) { alert("Success!"); window.location.href = "{{ url_for('admin.student_management') }}"; }
+    }
+</script>
+{% endblock %}

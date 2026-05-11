@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Student Overview{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('trainer.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Student Overview</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Student Overview</h1>
+            <div>
+                <button class="btn btn-success me-2" onclick="exportStudents()">
+                    <i class="fas fa-download me-2"></i>Export Data
+                </button>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                    <i class="fas fa-filter me-2"></i>Filters
+                </button>
+            </div>
+        </div>
+        <p class="text-muted">View student performance and progress in your assigned courses.</p>
+    </div>
+</div>
+
+<!-- Filters Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filter Students</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="GET" action="{{ url_for('trainer.student_overview') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="filterCourse" class="form-label">Course</label>
+                        <select class="form-select" id="filterCourse" name="course_id">
+                            <option value="">All Courses</option>
+                            {% for course in courses %}
+                            <option value="{{ course.course_id }}" {% if selected_course == course.course_id|string %}selected{% endif %}>
+                                {{ course.course_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="filterBatch" class="form-label">Batch</label>
+                        <select class="form-select" id="filterBatch" name="batch_id">
+                            <option value="">Select a course first</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Students Table -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Student List</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="studentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Course</th>
+                        <th>Batch</th>
+                        <th>Status</th>
+                        <th>Attendance</th>
+                        <th>Assignments</th>
+                        <th>Avg Grade</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student.full_name }}</td>
+                        <td>{{ student.email }}</td>
+                        <td>{{ student.phone }}</td>
+                        <td>{{ student.course_name }}</td>
+                        <td>{{ student.batch_name or 'N/A' }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if student.is_active else 'secondary' }}">
+                                {{ 'Active' if student.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if student.total_classes and student.total_classes > 0 %}
+                            <span class="badge bg-{{ 'success' if student.attendance_percentage >= 80 else 'warning' if student.attendance_percentage >= 60 else 'danger' }}">
+                                {{ student.attendance_percentage }}%
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if student.submitted_assignments == student.total_assignments and student.total_assignments > 0 else 'warning' if student.submitted_assignments > 0 else 'secondary' }}">
+                                {{ student.submitted_assignments or 0 }}/{{ student.total_assignments or 0 }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if student.avg_grade is not none %}
+                            <span class="badge bg-{{ 'success' if student.avg_grade >= 80 else 'warning' if student.avg_grade >= 60 else 'danger' }}">
+                                {{ "%.1f"|format(student.avg_grade) }}%
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info" onclick="viewStudentDetails('{{ student.student_id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Student Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentDetailsContent" class="text-center">
+                    <!-- Dynamic content will be loaded here by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Add Chart.js library to this page for the modal charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // This script block contains all the necessary logic for this page
+    
+    $(document).ready(function() {
+        $('#studentsTable').DataTable({
+            pageLength: 10,
+            ordering: true,
+            responsive: true
+        });
+
+        const courseSelect = $('#filterCourse');
+        const batchSelect = $('#filterBatch');
+        const selectedCourseOnLoad = '{{ selected_course }}';
+        const selectedBatchOnLoad = '{{ selected_batch }}';
+
+        async function loadBatches(courseId, selectedBatchId = null) {
+            // if (!courseId) {
+            //     batchSelect.html('<option value="">Select a course first</option>');
+            //     return;
+            // }
+             if (!courseId || courseId === 'None' || courseId === '') {
+                batchSelect.html('<option value="">Select a course first</option>');
+                return;
+            }
+            batchSelect.html('<option value="">Loading...</option>');
+            
+            const response = await fetch(`/trainer/get_batches/${courseId}`);
+            const data = await response.json();
+            
+            batchSelect.html('<option value="">All Batches</option>');
+            if (data.success) {
+                data.batches.forEach(batch => {
+                    const isSelected = selectedBatchId && batch.batch_id == selectedBatchId ? 'selected' : '';
+                    batchSelect.append(`<option value="${batch.batch_id}" ${isSelected}>${batch.batch_name}</option>`);
+                });
+            }
+        }
+
+        courseSelect.on('change', function() {
+            loadBatches($(this).val());
+        });
+
+        if (selectedCourseOnLoad) {
+            loadBatches(selectedCourseOnLoad, selectedBatchOnLoad);
+        }
+    });
+
+    // --- THIS IS THE NEW, FULLY WORKING FUNCTION ---
+    function viewStudentDetails(studentId) {
+        const modalElement = document.getElementById('studentDetailsModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        const contentDiv = document.getElementById('studentDetailsContent');
+
+        // 1. Show loading spinner immediately and display the modal
+        contentDiv.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>`;
+        modal.show();
+
+        // 2. Fetch detailed data from the backend
+        fetch(`/trainer/get_student_details/${studentId}`)
+            .then(response => {
+                if (!response.ok) { throw new Error('Network response was not ok'); }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const student = data.student;
+                    const assignments = data.assignments;
+
+                    const avgGrade = student.avg_grade ? parseFloat(student.avg_grade).toFixed(1) + '%' : 'N/A';
+                    const attendancePercentage = student.attendance_percentage ? student.attendance_percentage + '%' : 'N/A';
+
+                    // 3. Build the new HTML content for the modal
+                    let content = `
+                        <div class="row mb-4 text-start">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-user-circle me-2 text-primary"></i>Student Information</h5>
+                                <table class="table table-sm table-bordered">
+                                    <tr><th style="width: 30%;">Name:</th><td>${student.full_name ?? 'N/A'}</td></tr>
+                                    <tr><th>Email:</th><td>${student.email ?? 'N/A'}</td></tr>
+                                    <tr><th>Phone:</th><td>${student.phone ?? 'N/A'}</td></tr>
+                                    <tr><th>Course:</th><td>${student.course_name ?? 'N/A'}</td></tr>
+                                    <tr><th>Batch:</th><td>${student.batch_name ?? 'Not assigned'}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-chart-line me-2 text-success"></i>Performance Summary</h5>
+                                <table class="table table-sm table-bordered">
+                                    <tr><th style="width: 50%;">Attendance:</th><td>${attendancePercentage}</td></tr>
+                                    <tr><th>Assignments Submitted:</th><td>${student.submitted_assignments ?? 0} / ${student.total_assignments ?? 0}</td></tr>
+                                    <tr><th>Average Grade:</th><td>${avgGrade}</td></tr>
+                                    <tr><th>Approved Leaves Used:</th><td>${student.approved_leaves ?? 0} / ${student.max_leaves ?? 'N/A'}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row text-start">
+                            <div class="col-12">
+                                <h5><i class="fas fa-tasks me-2 text-info"></i>Assignment Grade Trajectory</h5>
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="studentGradeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>`;
+                    
+                    // 4. Update the modal's content
+                    contentDiv.innerHTML = content;
+
+                    // 5. Initialize the chart inside the modal
+                    const gradeCtx = document.getElementById('studentGradeChart').getContext('2d');
+                    const gradedAssignments = assignments.filter(a => a.grade !== null);
+                    
+                    if (gradeCtx && gradedAssignments.length > 0) {
+                        new Chart(gradeCtx, {
+                            type: 'line',
+                            data: {
+                                labels: gradedAssignments.map(a => a.title),
+                                datasets: [{
+                                    label: 'Grade (%)',
+                                    data: gradedAssignments.map(a => a.grade),
+                                    borderColor: '#4e73df',
+                                    backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                                    fill: true,
+                                    tension: 0.3
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { y: { beginAtZero: true, suggestedMax: 100 } },
+                                plugins: { legend: { display: false } }
+                            }
+                        });
+                    } else if (gradeCtx) {
+                        gradeCtx.font = "16px 'Poppins'";
+                        gradeCtx.fillStyle = "#858796";
+                        gradeCtx.textAlign = "center";
+                        gradeCtx.fillText("No graded assignments for this student yet.", gradeCtx.canvas.width / 2, gradeCtx.canvas.height / 2);
+                    }
+
+                } else {
+                    contentDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                contentDiv.innerHTML = '<div class="alert alert-danger">An error occurred while loading student details. Please try again.</div>';
+            });
+    }
+
+    function exportStudents() {
+        const courseId = $('#filterCourse').val();
+        const batchId = $('#filterBatch').val();
+        
+        const params = new URLSearchParams();
+        if (courseId) params.append('course_id', courseId);
+        if (batchId) params.append('batch_id', batchId);
+        
+        let url = '{{ url_for("trainer.export_students") }}';
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

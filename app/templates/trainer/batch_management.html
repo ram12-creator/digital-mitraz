@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Manage {{ batch.batch_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('trainer.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('trainer.my_batches') }}">My Batches</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ batch.batch_name }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<!-- =============================================================== -->
+<!-- JINJA MACRO TO RENDER TOPIC HIERARCHY RECURSIVELY               -->
+<!-- =============================================================== -->
+{% macro render_topic_accordion(topic_list, parent_id) %}
+<div class="accordion" id="topicsAccordion-{{ parent_id }}">
+    {% for topic in topic_list %}
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="heading-{{ topic.topic_id }}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ topic.topic_id }}">
+                <span class="fw-bold me-2">#{{ topic.sequence_order }}</span> {{ topic.topic_name }}
+            </button>
+        </h2>
+        <div id="collapse-{{ topic.topic_id }}" class="accordion-collapse collapse" data-bs-parent="#topicsAccordion-{{ parent_id }}">
+            <div class="accordion-body">
+                <p class="small text-muted fst-italic">{{ topic.description or 'No description provided.' }}</p>
+                <div class="mb-3">
+                    <button class="btn btn-outline-primary btn-sm edit-topic-btn" data-bs-toggle="modal" data-bs-target="#editTopicModal" 
+                            data-topic-id="{{ topic.topic_id }}" 
+                            data-topic-name="{{ topic.topic_name }}" 
+                            data-description="{{ topic.description }}" 
+                            data-sequence="{{ topic.sequence_order }}" 
+                            data-parent-id="{{ topic.parent_topic_id or '' }}">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm delete-topic-btn" data-topic-id="{{ topic.topic_id }}">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                    <button class="btn btn-outline-success btn-sm new-subtopic-btn" data-bs-toggle="modal" data-bs-target="#createTopicModal" 
+                            data-parent-id="{{ topic.topic_id }}" 
+                            data-parent-name="{{ topic.topic_name }}">
+                        <i class="fas fa-plus"></i> Add Sub-topic
+                    </button>
+                </div>
+
+                <!-- Recursive call for children -->
+                {% if topic.children %}
+                    <div class="ms-3 border-start ps-3">
+                        {{ render_topic_accordion(topic.children, topic.topic_id) }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">Manage Batch: <span class="text-primary">{{ batch.batch_name }}</span></h1>
+        <p class="text-muted">Course: {{ batch.course_name }}</p>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs mb-4" id="batchTabs" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active" id="topics-tab" data-bs-toggle="tab" data-bs-target="#topics" type="button" role="tab">Curriculum</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="assignments-tab" data-bs-toggle="tab" data-bs-target="#assignments" type="button" role="tab">Assignments ({{ assignments|length }})</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#students" type="button" role="tab">Students ({{ students|length }})</button></li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link position-relative" id="on-leave-tab" data-bs-toggle="tab" data-bs-target="#on-leave" type="button" role="tab">
+            On Leave Today
+            {% if students_on_leave %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ students_on_leave|length }}</span>{% endif %}
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="batchTabsContent">
+    
+    <!-- Topics Tab (HIERARCHICAL VIEW) -->
+    <div class="tab-pane fade show active" id="topics" role="tabpanel">
+        <div class="card shadow">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Curriculum Structure</h6>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createTopicModal"><i class="fas fa-plus me-2"></i>New Tool/Technology</button>
+            </div>
+            <div class="card-body">
+                {% if topics_tree %}
+                    {{ render_topic_accordion(topics_tree, 'root') }}
+                {% else %}
+                    <p class="text-center text-muted">No topics, tools, or technologies have been created for this batch yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Students Tab -->
+    <div class="tab-pane fade" id="students" role="tabpanel">
+        <div class="card shadow">
+            <div class="card-header"><h6 class="m-0 font-weight-bold text-primary">Enrolled Students</h6></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="studentsTable">
+                        <thead class="table-light"><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr><td>{{ student.full_name }}</td><td>{{ student.email }}</td><td>{{ student.phone }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignments Tab -->
+    <div class="tab-pane fade" id="assignments" role="tabpanel">
+        <div class="card shadow">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Assignments for this Batch</h6>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createAssignmentModal"><i class="fas fa-plus me-2"></i>New Assignment</button>
+            </div>
+            <div class="card-body">
+                 <div class="table-responsive">
+                    <table class="table table-hover" id="assignmentsTable">
+                         <thead class="table-light"><tr><th>Title</th><th>Topic</th><th>Due Date</th><th>Actions</th></tr></thead>
+                         <tbody>
+                            {% for assignment in assignments %}
+                            <tr>
+                                <td>{{ assignment.title }}</td>
+                                <td>{{ assignment.topic_name }}</td>
+                                <td>{{ assignment.due_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                         <a href="{{ url_for('trainer.view_submissions', assignment_id=assignment.assignment_id) }}" class="btn btn-outline-info"><i class="fas fa-eye"></i> View Submissions</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                         </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- On Leave Tab -->
+    <div class="tab-pane fade" id="on-leave" role="tabpanel">
+        <div class="card shadow">
+            <div class="card-header"><h6 class="m-0 font-weight-bold text-primary">Students on Approved Leave Today ({{ now.strftime('%B %d, %Y') }})</h6></div>
+            <div class="card-body">
+                {% if students_on_leave %}
+                <ul class="list-group">
+                    {% for leave in students_on_leave %}
+                    <li class="list-group-item"><strong>{{ leave.full_name }}</strong> - Reason: <em>{{ leave.reason }}</em></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-center text-muted">No students from this batch are on approved leave today.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+
+<!-- Create/Edit Topic Modal -->
+<div class="modal fade" id="createTopicModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="createTopicModalTitle">Create New Topic</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="createTopicForm">
+                <div class="modal-body">
+                    <input type="hidden" name="course_id" value="{{ batch.course_id }}">
+                    <input type="hidden" name="batch_id" value="{{ batch.batch_id }}">
+                    
+                    <div class="mb-3">
+                        <label for="parent_topic_id" class="form-label">Parent (Tool/Technology/Topic)</label>
+                        <select class="form-select" id="parent_topic_id" name="parent_topic_id">
+                            <option value="">-- None (This is a top-level Tool/Technology) --</option>
+                            {% for topic in flat_topics %}
+                                <option value="{{ topic.topic_id }}">{{ topic.topic_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3"><label class="form-label">Name (Topic/Sub-topic) *</label><input type="text" class="form-control" name="topic_name" required></div>
+                    <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="3"></textarea></div>
+                    <div class="mb-3"><label class="form-label">Sequence Order *</label><input type="number" class="form-control" name="sequence_order" min="1" value="1" required></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Create</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Topic Modal -->
+<div class="modal fade" id="editTopicModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Edit Topic</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="editTopicForm">
+                <input type="hidden" id="edit_topic_id" name="topic_id">
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label">Topic Name *</label><input type="text" class="form-control" id="edit_topic_name" name="topic_name" required></div>
+                    <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" id="edit_description" name="description" rows="3"></textarea></div>
+                    <div class="mb-3"><label class="form-label">Sequence Order *</label><input type="number" class="form-control" id="edit_sequence_order" name="sequence_order" min="1" required></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Create Assignment Modal -->
+<div class="modal fade" id="createAssignmentModal" tabindex="-1">
+     <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Create New Assignment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form id="createAssignmentForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="batch_id" value="{{ batch.batch_id }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label">Title *</label><input type="text" class="form-control" name="title" required></div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Topic / Sub-topic *</label>
+                            <select class="form-select" name="topic_id" required>
+                                <option value="">Select an item...</option>
+                                {% for topic in topics_tree %}
+                                    <optgroup label="TOOL: {{ topic.topic_name }}">
+                                        {% for child in topic.children %}
+                                            <option value="{{ child.topic_id }}">&nbsp;&nbsp;{{ child.topic_name }}</option>
+                                            {% for grandchild in child.children %}
+                                                 <option value="{{ grandchild.topic_id }}">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-- {{ grandchild.topic_name }}</option>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="3"></textarea></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label">Due Date *</label><input type="datetime-local" class="form-control" name="due_date" required></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Type</label><select class="form-select" name="assignment_type"><option value="individual">Individual</option><option value="group">Group</option></select></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Max Points</label><input type="number" class="form-control" name="max_points" min="0" value="100"></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Assignment File (PDF, etc.)</label><input type="file" class="form-control" name="assignment_file"></div>
+                    <hr>
+                    <h6 class="text-muted">Auto-Evaluation Settings</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Evaluation Type</label>
+                            <select class="form-select" name="evaluation_type">
+    <option value="none" selected>Manual Grading Only</option>
+    <option value="python">Python Auto-Grade</option>
+    <option value="sql">SQL Auto-Grade</option>
+    <option value="excel">Excel Auto-Grade</option>
+    <option value="web">Web (HTML/CSS) Auto-Grade</option>
+</select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Test Case File</label>
+                            <input type="file" class="form-control" name="test_case_file">
+                            <div class="form-text">Required for auto-grading. E.g., a `test.py` script.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Create Assignment</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    ['#studentsTable', '#assignmentsTable'].forEach(id => {
+        if(document.querySelector(id)) $(id).DataTable({ responsive: true, pageLength: 5 });
+    });
+
+    const createTopicModalEl = document.getElementById('createTopicModal');
+    const createTopicModal = new bootstrap.Modal(createTopicModalEl);
+    const editTopicModal = new bootstrap.Modal(document.getElementById('editTopicModal'));
+
+    // --- Logic for "Add Sub-topic" and "New Tool" buttons ---
+    createTopicModalEl.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const parentId = button.dataset.parentId;
+        const parentName = button.dataset.parentName;
+        const titleEl = document.getElementById('createTopicModalTitle');
+        const parentSelect = document.getElementById('parent_topic_id');
+
+        createTopicForm.reset(); // Reset form on open
+
+        if (parentId) { // Triggered by "Add Sub-topic"
+            titleEl.textContent = `Add Sub-topic to: ${parentName}`;
+            parentSelect.value = parentId;
+        } else { // Triggered by "New Tool/Technology"
+            titleEl.textContent = 'Create New Tool/Technology';
+            parentSelect.value = '';
+        }
+    });
+
+    // --- Create Topic Form Submission ---
+    document.getElementById('createTopicForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        const response = await fetch('{{ url_for("trainer.create_topic") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if(result.success) { alert(result.message); location.reload(); }
+        else { alert("Error: " + (result.message || "Please check your input.")); }
+    });
+    
+    // --- Edit Topic Button Logic ---
+    document.querySelectorAll('.edit-topic-btn').forEach(btn => btn.addEventListener('click', function() {
+        const data = this.dataset;
+        const form = document.getElementById('editTopicForm');
+        form.querySelector('#edit_topic_id').value = data.topicId;
+        form.querySelector('#edit_topic_name').value = data.topicName;
+        form.querySelector('#edit_description').value = data.description;
+        form.querySelector('#edit_sequence_order').value = data.sequence;
+    }));
+
+    // --- Edit Topic Form Submission ---
+    document.getElementById('editTopicForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const topicId = e.target.querySelector('#edit_topic_id').value;
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        const response = await fetch(`/trainer/update_topic/${topicId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if(result.success) { alert(result.message); location.reload(); }
+        else { alert("Error: " + result.message); }
+    });
+
+    // --- Delete Topic Button Logic ---
+    document.querySelectorAll('.delete-topic-btn').forEach(btn => btn.addEventListener('click', async function() {
+        if (confirm('Are you sure you want to delete this topic? This action cannot be undone.')) {
+            const topicId = this.dataset.topicId;
+            const response = await fetch(`/trainer/delete_topic/${topicId}`, { method: 'POST' });
+            const result = await response.json();
+            alert(result.message);
+            if(result.success) location.reload();
+        }
+    }));
+    
+    // --- Create Assignment Form Submission ---
+    document.getElementById('createAssignmentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const response = await fetch('{{ url_for("trainer.create_assignment") }}', {
+            method: 'POST',
+            body: new FormData(e.target)
+        });
+        const result = await response.json();
+        if(result.success) { alert(result.message); location.reload(); }
+        else { alert("Error: " + result.message); }
+    });
+});
+</script>
+{% endblock %}

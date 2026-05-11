@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Management{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('student.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Leave Application</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Leave Management</h1>
+        <p class="text-muted">Apply for leaves and track your application status.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- LEAVE APPLICATION FORM -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow border-0 h-100">
+            <div class="card-header bg-white py-3 border-left-primary">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-edit me-2"></i>Apply for Leave
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if student_info and student_info.batch_id %}
+                <form id="leaveApplicationForm" enctype="multipart/form-data">
+                    <input type="hidden" name="batch_id" value="{{ student_info.batch_id }}">
+                    
+                    <!-- Leave Type Selection -->
+                    <div class="mb-3">
+                        <label for="leaveTypeId" class="form-label fw-bold">Leave Type *</label>
+                        <select class="form-select" id="leaveTypeId" name="leave_type_id" required>
+                            <option value="" disabled selected>Select a leave category...</option>
+                            {% for type in leave_types %}
+                                <option value="{{ type.leave_type_id }}">{{ type.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        <!-- Dynamic Hints -->
+                        <div id="personalLeaveHint" class="form-text text-warning mt-2" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-1"></i> 
+                            <strong>Note:</strong> Personal leave must be applied at least 2 days in advance.
+                        </div>
+                        <div id="balanceDisplay" class="alert alert-info mt-2 py-2 small" style="display: none;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Balance: <strong id="remainingLeaves"></strong> / <span id="totalLeaves"></span> days remaining.
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startDate" class="form-label fw-bold">Start Date *</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="endDate" class="form-label fw-bold">End Date *</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reason" class="form-label fw-bold">Reason *</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" required placeholder="Please provide a clear reason for your leave..."></textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="supportingDocument" class="form-label fw-bold">Supporting Document <span class="text-muted fw-normal">(Optional)</span></label>
+                        <input type="file" class="form-control" id="supportingDocument" name="supporting_document">
+                        <div class="form-text">E.g., Medical certificate for sick leave.</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Application
+                    </button>
+                </form>
+                {% else %}
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-circle fa-2x mb-3"></i><br>
+                    You must be enrolled in an active batch to apply for leave. Please contact your administrator.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- LEAVE HISTORY -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow border-0 h-100">
+            <div class="card-header bg-white py-3 border-left-info">
+                <h6 class="m-0 font-weight-bold text-info">
+                    <i class="fas fa-history me-2"></i>Application History
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" style="max-height: 550px; overflow-y: auto;">
+                    {% if leave_applications %}
+                        {% for leave in leave_applications %}
+                        <div class="list-group-item p-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 text-dark fw-bold">{{ leave.type_name|title }}</h6>
+                                <span class="badge bg-{{'warning' if leave.status=='pending' else 'success' if leave.status=='approved' else 'danger'}} rounded-pill px-3">
+                                    {{ leave.status|title }}
+                                </span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-end">
+                                <div>
+                                    <p class="mb-1 small text-muted">
+                                        <i class="far fa-calendar-alt me-1"></i> 
+                                        {{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d, %Y') }}
+                                    </p>
+                                    <p class="mb-0 small text-muted">
+                                        <i class="far fa-clock me-1"></i> {{ leave.days_requested }} Day(s)
+                                    </p>
+                                </div>
+                                {% if leave.status == 'pending' %}
+                                <button class="btn btn-outline-danger btn-sm" onclick="cancelLeave('{{ leave.leave_id }}')" data-bs-toggle="tooltip" title="Cancel Request">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                {% endif %}
+                            </div>
+
+                            <!-- Admin Comments Section -->
+                            {% if leave.status == 'rejected' and leave.admin_comments %}
+                            <div class="alert alert-danger py-2 px-3 mt-2 mb-0 small">
+                                <strong>Admin Note:</strong> {{ leave.admin_comments }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center p-5 text-muted">
+                            <i class="fas fa-folder-open fa-3x mb-3 text-gray-300"></i>
+                            <p>No leave applications found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // --- 1. INITIAL SETUP ---
+    const leaveTypeSelect = $('#leaveTypeId');
+    const startDateInput = $('#startDate');
+    const endDateInput = $('#endDate');
+    const hintText = $('#personalLeaveHint');
+    const balanceDisplay = $('#balanceDisplay');
+    const remainingSpan = $('#remainingLeaves');
+    const totalSpan = $('#totalLeaves');
+
+    // Parse balances from backend
+    const leaveBalances = JSON.parse('{{ student_info.balances | tojson | safe }}');
+
+    // Date Logic Setup
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const twoDaysLater = new Date(today);
+    twoDaysLater.setDate(today.getDate() + 2);
+    const validPersonalStr = twoDaysLater.toISOString().split('T')[0];
+
+    // Initialize Min Date to Today
+    startDateInput.attr('min', todayStr);
+
+    // --- 2. LEAVE TYPE CHANGE LOGIC ---
+    leaveTypeSelect.on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const typeName = selectedOption.text().trim();
+        
+        // A. 2-Day Rule for Personal Leave
+        if (typeName === 'Personal') {
+            hintText.slideDown();
+            startDateInput.attr('min', validPersonalStr);
+            
+            // If user already picked a date that is too soon, clear it
+            if(startDateInput.val() && startDateInput.val() < validPersonalStr) {
+                alert("Personal Leave requires 2 days prior notice.\nEarliest date: " + validPersonalStr);
+                startDateInput.val('');
+                endDateInput.val('');
+            }
+        } else {
+            hintText.slideUp();
+            startDateInput.attr('min', todayStr); // Reset to today for Medical/Emergency
+        }
+
+        // B. Update Balance Display
+        if (leaveBalances[typeName]) {
+            const bal = leaveBalances[typeName];
+            remainingSpan.text(bal.remaining);
+            totalSpan.text(bal.total);
+            balanceDisplay.removeClass('alert-danger alert-info').addClass(bal.remaining === 0 ? 'alert-danger' : 'alert-info');
+            balanceDisplay.slideDown();
+        } else {
+            balanceDisplay.slideUp();
+        }
+    });
+
+    // --- 3. DATE VALIDATION ---
+    startDateInput.on('change', function() {
+        // Ensure End Date cannot be before Start Date
+        endDateInput.attr('min', $(this).val());
+        if(endDateInput.val() && endDateInput.val() < $(this).val()) {
+            endDateInput.val($(this).val());
+        }
+    });
+
+    // --- 4. FORM SUBMISSION ---
+    $('#leaveApplicationForm').on('submit', async function(e) {
+        e.preventDefault();
+        const form = this;
+        const submitButton = $(form).find('button[type="submit"]');
+        const originalText = submitButton.html();
+        
+        // Visual Feedback
+        submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Applying...');
+        
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch('{{ url_for("student.apply_leave") }}', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert("Leave Application Submitted Successfully!");
+                location.reload();
+            } else {
+                alert('Validation Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('A network error occurred. Please try again.');
+        } finally {
+            submitButton.prop('disabled', false).html(originalText);
+        }
+    });
+});
+
+// --- 5. CANCEL LEAVE LOGIC ---
+async function cancelLeave(leaveId) {
+    if (confirm('Are you sure you want to withdraw this application?')) {
+        try {
+            const response = await fetch(`/student/cancel_leave/${leaveId}`, { method: 'POST' });
+            const result = await response.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            alert('Error cancelling leave.');
+        }
+    }
+}
+</script>
+{% endblock %}

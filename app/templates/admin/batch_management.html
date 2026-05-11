@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0 text-gray-800">Batch Management</h1>
+                <p class="text-muted small">Organize training cohorts and configure leave rules.</p>
+            </div>
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createBatchModal">
+                <i class="fas fa-plus-circle me-2"></i>Create New Batch
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if not batches_by_course %}
+<div class="alert alert-info text-center shadow-sm border-0">
+    <i class="fas fa-info-circle me-2"></i>You have not been assigned to any active courses. Please contact the Super Admin.
+</div>
+{% endif %}
+
+<!-- Batches Grouped by Course -->
+{% for course_id, course_data in batches_by_course.items() %}
+<div class="card shadow mb-4 border-top-primary">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-book me-2"></i>{{ course_data.course_name }}
+        </h6>
+    </div>
+    <div class="card-body bg-light">
+        {% if course_data.batches %}
+        <div class="row">
+            {% for batch in course_data.batches %}
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card h-100 shadow-sm border-0 hover-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title font-weight-bold text-dark mb-0">{{ batch.batch_name }}</h5>
+                            <span class="badge bg-{{ 'success' if batch.is_active else 'secondary' }}">
+                                {{ 'Active' if batch.is_active else 'Inactive' }}
+                            </span>
+                        </div>
+                        
+                        <div class="text-muted small mb-3">
+                            <i class="far fa-calendar-alt me-1"></i> 
+                            {{ batch.start_date.strftime('%d %b %Y') }} - {{ batch.end_date.strftime('%d %b %Y') }}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-white rounded border">
+                            <span class="small text-muted"><i class="fas fa-users me-1"></i> Capacity</span>
+                            <span class="font-weight-bold text-primary">{{ batch.student_count }} / {{ batch.max_students }}</span>
+                        </div>
+                        
+                        <!-- Leave Limits Badge Area -->
+                        <div class="mb-3">
+                            <span class="badge bg-light text-dark border me-1" title="Personal Leave Limit">PL: {{ batch.personal_leave_limit }}</span>
+                            <span class="badge bg-light text-dark border me-1" title="Medical Leave Limit">ML: {{ batch.medical_leave_limit or '∞' }}</span>
+                            <span class="badge bg-light text-dark border" title="Academic Leave Limit">AL: {{ batch.academic_leave_limit or '∞' }}</span>
+                        </div>
+
+                        <!-- Reporting Actions (New Feature) -->
+                        <div class="mt-3 pt-2 border-top">
+                            <small class="text-muted fw-bold d-block mb-2 text-uppercase" style="font-size: 0.7rem;">Download Reports</small>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('admin.download_batch_report', batch_id=batch.batch_id, report_type='dropout') }}" 
+                                   class="btn btn-sm btn-outline-danger w-100" style="font-size: 0.75rem;">
+                                    <i class="fas fa-user-times me-1"></i> Dropouts
+                                </a>
+                                <a href="{{ url_for('admin.download_batch_report', batch_id=batch.batch_id, report_type='alumni') }}" 
+                                   class="btn btn-sm btn-outline-success w-100" style="font-size: 0.75rem;">
+                                    <i class="fas fa-user-graduate me-1"></i> Pass-outs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center">
+                        <button class="btn btn-sm btn-outline-primary edit-batch-btn"
+                                data-bs-toggle="modal" data-bs-target="#editBatchModal"
+                                data-batch-id="{{ batch.batch_id }}"
+                                data-batch-name="{{ batch.batch_name }}"
+                                data-start-date="{{ batch.start_date.strftime('%Y-%m-%d') }}"
+                                data-end-date="{{ batch.end_date.strftime('%Y-%m-%d') }}"
+                                data-max-students="{{ batch.max_students }}"
+                                data-is-active="{{ batch.is_active }}"
+                                data-personal-limit="{{ batch.personal_leave_limit }}"
+                                data-medical-limit="{{ batch.medical_leave_limit }}"
+                                data-academic-limit="{{ batch.academic_leave_limit }}"
+                                data-special-limit="{{ batch.special_leave_limit }}">
+                            <i class="fas fa-edit me-1"></i> Edit
+                        </button>
+                        
+                        <a href="{{ url_for('admin.student_management', batch_id=batch.batch_id) }}" class="btn btn-sm btn-info text-white">
+                            View Students <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" style="height: 50px; opacity: 0.3;" class="mb-3">
+            <p class="text-muted">No batches created for this course yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- Create Batch Modal -->
+<div class="modal fade" id="createBatchModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Create New Batch</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createBatchForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Course *</label>
+                            <select class="form-select" name="course_id" required>
+                                <option value="">Select Course...</option>
+                                {% for course in courses %}
+                                <option value="{{ course.course_id }}">{{ course.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Batch Name *</label>
+                            <input type="text" class="form-control" name="batch_name" placeholder="e.g. Batch 01 Morning" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" class="form-control" name="start_date" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" class="form-control" name="end_date" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Max Capacity *</label>
+                            <input type="number" class="form-control" name="max_students" value="30" required>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6 class="text-primary fw-bold mb-3"><i class="fas fa-sliders-h me-2"></i>Leave Configuration (Days)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label small">Personal Limit</label>
+                            <input type="number" class="form-control" name="personal_leave_limit" value="5">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Medical Limit</label>
+                            <input type="number" class="form-control" name="medical_leave_limit" placeholder="Unlimited">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Academic Limit</label>
+                            <input type="number" class="form-control" name="academic_leave_limit" placeholder="Unlimited">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Special Limit</label>
+                            <input type="number" class="form-control" name="special_leave_limit" placeholder="Unlimited">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Batch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Batch Modal -->
+<div class="modal fade" id="editBatchModal" tabindex="-1">
+     <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Edit Batch</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editBatchForm">
+                <input type="hidden" id="edit_batch_id" name="batch_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Batch Name *</label>
+                        <input type="text" class="form-control" id="edit_batch_name" name="batch_name" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date *</label>
+                            <input type="date" class="form-control" id="edit_start_date" name="start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">End Date *</label>
+                            <input type="date" class="form-control" id="edit_end_date" name="end_date" required>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                         <div class="col-md-6">
+                            <label class="form-label">Max Students</label>
+                            <input type="number" class="form-control" id="edit_max_students" name="max_students" required>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+                                <label class="form-check-label fw-bold" for="edit_is_active">Batch Active Status</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h6 class="text-primary fw-bold mb-3">Update Leave Rules</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label small">Personal</label>
+                            <input type="number" class="form-control" id="edit_personal_limit" name="personal_leave_limit">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Medical</label>
+                            <input type="number" class="form-control" id="edit_medical_limit" name="medical_leave_limit">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Academic</label>
+                            <input type="number" class="form-control" id="edit_academic_limit" name="academic_leave_limit">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Special</label>
+                            <input type="number" class="form-control" id="edit_special_limit" name="special_leave_limit">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Create Batch
+    document.getElementById('createBatchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(this).entries());
+        data.is_active = true; // Default
+        
+        try {
+            const res = await fetch('{{ url_for("admin.create_batch") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if(result.success) { alert(result.message); location.reload(); }
+            else alert("Error: " + result.message);
+        } catch(e) { console.error(e); }
+    });
+
+    // 2. Populate Edit Modal
+    document.querySelectorAll('.edit-batch-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const d = this.dataset;
+            const form = document.getElementById('editBatchForm');
+            form.querySelector('#edit_batch_id').value = d.batchId;
+            form.querySelector('#edit_batch_name').value = d.batchName;
+            form.querySelector('#edit_start_date').value = d.startDate;
+            form.querySelector('#edit_end_date').value = d.endDate;
+            form.querySelector('#edit_max_students').value = d.maxStudents;
+            form.querySelector('#edit_is_active').checked = (d.isActive === 'True' || d.isActive === '1');
+            
+            form.querySelector('#edit_personal_limit').value = d.personalLimit;
+            form.querySelector('#edit_medical_limit').value = d.medicalLimit;
+            form.querySelector('#edit_academic_limit').value = d.academicLimit;
+            form.querySelector('#edit_special_limit').value = d.specialLimit;
+        });
+    });
+
+    // 3. Update Batch
+    document.getElementById('editBatchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const batchId = formData.get('batch_id');
+        const data = Object.fromEntries(formData.entries());
+        data.is_active = document.getElementById('edit_is_active').checked;
+
+        try {
+            const res = await fetch(`/admin/update_batch/${batchId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if(result.success) { alert(result.message); location.reload(); }
+            else alert("Error: " + result.message);
+        } catch(e) { console.error(e); }
+    });
+});
+</script>
+{% endblock %}

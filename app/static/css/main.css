@@ -1,0 +1,513 @@
+/* ===================================================================
+   MAIN STYLESHEET - DIGITAL MITRAZ - RED/CHARCOAL THEME
+   =================================================================== */
+
+/* --- 1. Enhanced Root Variables & Global Styles --- */
+:root {
+    /* --- BRAND PALETTE --- */
+    --brand-red: #D32F2F;        /* Primary Brand Color */
+    --brand-red-dark: #B71C1C;   /* Darker Red for hover/gradients */
+    
+    /* UPDATED: Changed from harsh black to Rich Charcoal Blue */
+    --brand-black: #2C3E50;      
+    
+    --brand-grey: #F5F5F5;       /* Light Grey for backgrounds */
+    
+    /* --- FUNCTIONAL MAPPINGS --- */
+    --primary-color: var(--brand-red);
+    --primary-darker: var(--brand-red-dark);
+    --secondary-color: var(--brand-black);
+    
+    /* Status Colors */
+    --success-color: #2E7D32;    /* Professional Green */
+    --info-color: #424242;       /* Dark Grey */
+    --warning-color: #F9A825;    /* Deep Gold/Amber */
+    --danger-color: #C62828;     /* Red for alerts */
+
+    /* UI Colors */
+    --header-footer-bg: var(--brand-black);
+    --background-color: #FAFAFA; /* Very light grey/white */
+    --text-dark: #212121;
+    --text-light: #757575;
+    --card-bg: #ffffff;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --border-color: #E0E0E0;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%); /* Red Gradient */
+    --gradient-secondary: linear-gradient(135deg, #2C3E50 0%, #1A252F 100%); /* Charcoal Gradient */
+    
+    --font-family: 'Poppins', sans-serif;
+    --animation-timing: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--text-dark);
+    overflow-x: hidden;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Enhanced selection style */
+::selection {
+    background-color: rgba(211, 47, 47, 0.2); /* Red tint */
+    color: var(--primary-color);
+}
+
+.main-content-wrapper {
+    padding-top: 80px;
+    min-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+}
+
+main.container-fluid {
+    flex-grow: 1;
+    padding: 2rem;
+}
+
+/* --- 2. Navigation Bar --- */
+.navbar-custom {
+    background: #FFFFFF;
+    padding: 0.75rem 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border-bottom: 3px solid var(--brand-red);
+    transition: all 0.3s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-weight: 300;
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+    color: var(--brand-black) !important;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-brand .brand-bold {
+    font-weight: 800;
+    color: var(--brand-red);
+}
+
+/* Logo Sizing */
+.navbar-logo {
+    height: 55px; /* Increased Size */
+    width: auto;
+    margin-right: 12px;
+    object-fit: contain;
+}
+
+.navbar-nav .nav-link {
+    font-weight: 600;
+    position: relative;
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.25rem;
+    color: var(--text-dark) !important;
+    transition: all 0.3s var(--animation-timing);
+    border-radius: 0.375rem;
+}
+
+.navbar-nav .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 3px;
+    background: var(--brand-red);
+    border-radius: 2px;
+    transition: width 0.3s var(--animation-timing);
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+    color: var(--brand-red) !important;
+    background-color: rgba(211, 47, 47, 0.05);
+}
+
+.navbar-nav .nav-link:hover::after,
+.navbar-nav .nav-link.active::after {
+    width: 60%;
+}
+
+.navbar .dropdown-menu {
+    border-radius: 0.75rem;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    background: #fff;
+    animation: dropdownFade 0.3s ease-out;
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.navbar .dropdown-item {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.navbar .dropdown-item:hover {
+    background-color: rgba(211, 47, 47, 0.05);
+    color: var(--primary-color);
+}
+
+.navbar .role-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    background: var(--brand-red);
+    color: white;
+    border-radius: 1rem;
+}
+
+.dropdown-toggle {
+    color: var(--brand-black) !important;
+}
+
+/* --- 3. Enhanced Rich Footer --- */
+.footer {
+    background: linear-gradient(180deg, var(--brand-black) 0%, #1A252F 100%);
+    color: #B0B0B0;
+    padding-top: 5rem;
+    margin-top: auto;
+    position: relative;
+    z-index: 10;
+}
+
+.footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--gradient-primary);
+    box-shadow: 0 4px 20px rgba(211, 47, 47, 0.4); 
+}
+
+.footer-logo {
+    height: 70px; /* Increased Size */
+    width: auto;
+    margin-right: 15px;
+    filter: brightness(0) invert(1); 
+}
+
+.footer-brand {
+    font-size: 1.8rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    color: #FFFFFF;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.footer-brand .brand-bold {
+    font-weight: 800;
+    color: var(--brand-red);
+}
+
+.footer-heading {
+    color: #FFFFFF;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 1.5rem;
+    display: block;
+}
+
+.footer ul {
+    padding-left: 0;
+    list-style: none;
+}
+
+.footer ul li {
+    margin-bottom: 0.8rem;
+}
+
+.footer ul a {
+    color: #9E9E9E;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.95rem;
+    position: relative;
+}
+
+.footer ul a:hover {
+    color: #FFFFFF;
+    transform: translateX(5px);
+}
+
+.footer ul a::before {
+    content: '›';
+    position: absolute;
+    left: -15px;
+    color: var(--brand-red);
+    font-weight: bold;
+    font-size: 1.2rem;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+}
+
+.footer ul a:hover::before {
+    opacity: 1;
+    transform: translateX(0);
+    left: -12px;
+}
+
+.social-icons {
+    display: flex;
+    gap: 12px;
+}
+
+.social-icons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.social-icons a:hover {
+    transform: translateY(-4px);
+    background: var(--brand-red);
+    border-color: var(--brand-red);
+    box-shadow: 0 8px 20px rgba(211, 47, 47, 0.4);
+}
+
+.footer-bottom {
+    background: #17202A; /* Slightly darker than brand-black */
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem 0;
+    margin-top: 4rem;
+    text-align: center;
+    color: #616161;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+/* --- 4. Enhanced Polished Components --- */
+.card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    background: #fff;
+}
+
+.card:hover {
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px);
+}
+
+/* Left Borders */
+.card.border-left-primary { border-left: 5px solid var(--brand-red) !important; }
+.card.border-left-success { border-left: 5px solid var(--brand-black) !important; }
+.card.border-left-info { border-left: 5px solid #757575 !important; }
+.card.border-left-warning { border-left: 5px solid var(--warning-color) !important; }
+
+/* Dashboard Text Colors */
+.text-primary { color: var(--brand-red) !important; }
+.text-success { color: var(--success-color) !important; }
+.text-info { color: var(--brand-black) !important; }
+.text-warning { color: var(--warning-color) !important; }
+
+.card-header {
+    background-color: #fff;
+    font-weight: 600;
+    color: var(--text-dark);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(211, 47, 47, 0.4);
+    background: linear-gradient(135deg, #B71C1C 0%, #8E0000 100%);
+}
+
+.btn-secondary {
+    background: var(--gradient-secondary);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+    color: white;
+}
+
+.btn-outline-primary {
+    background: transparent;
+    border: 2px solid var(--brand-red);
+    color: var(--brand-red);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--brand-red);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 7px 20px rgba(211, 47, 47, 0.2);
+}
+
+/* --- 5. Enhanced Form Elements --- */
+.form-control, .form-select {
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: #fff;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--brand-red);
+    box-shadow: 0 0 0 4px rgba(211, 47, 47, 0.1);
+    outline: none;
+}
+
+.input-group-text {
+    background-color: #f5f5f5;
+    border: 2px solid var(--border-color);
+    border-right: none;
+    color: var(--text-light);
+}
+
+/* --- 6. Table Styles --- */
+.table thead th {
+    border-bottom: 2px solid var(--brand-red);
+    color: var(--brand-black);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    padding: 1rem;
+    background-color: #FAFAFA;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(211, 47, 47, 0.03);
+}
+
+/* --- 7. Alert Styles --- */
+.alert-primary {
+    background-color: rgba(211, 47, 47, 0.1);
+    color: var(--brand-red);
+    border-left: 4px solid var(--brand-red);
+}
+
+.alert-success {
+    background-color: rgba(46, 125, 50, 0.1);
+    color: var(--success-color);
+    border-left: 4px solid var(--success-color);
+}
+
+/* --- 8. Badge Styles --- */
+.badge-primary { background-color: var(--brand-red); }
+.badge-success { background-color: var(--success-color); }
+.badge-danger { background-color: var(--brand-red-dark); }
+.badge-warning { background-color: var(--warning-color); color: #fff; }
+.badge-info { background-color: var(--brand-black); color: white; }
+
+/* --- 9. Auth Pages (Login) --- */
+.auth-header {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 3rem;
+    text-align: center;
+}
+
+.auth-logo {
+    height: 120px; /* Big Logo */
+    width: auto;
+    margin-bottom: 1.5rem;
+    /* No filter */
+}
+
+.auth-btn {
+    background: var(--gradient-primary);
+    border: none;
+    padding: 0.8rem 2rem;
+    font-weight: 700;
+    color: white;
+    width: 100%;
+    box-shadow: 0 5px 15px rgba(211, 47, 47, 0.4);
+}
+
+/* --- 10. Scrollbar --- */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-red);
+}
+

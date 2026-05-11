@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Management{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Leave Management</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">Leave Management</h1>
+        <p class="text-muted">Review and manage student leave applications.</p>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">All Leave Applications</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="leaveTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student</th>
+                        <th>Batch</th>
+                        <th>Leave Type</th>
+                        <th>Period</th>
+                        <th>Days</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leave in leave_applications %}
+                    <tr>
+                        <td>{{ leave.student_name }}</td>
+                        <td><span class="badge bg-info">{{ leave.batch_name or 'N/A' }}</span></td>
+                        <td>{{ leave.type_name | title if leave.type_name else 'N/A' }}</td>
+                        <td>{{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d, %Y') }}</td>
+                        <td>{{ leave.days_requested }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'warning' if leave.status == 'pending' else 'success' if leave.status == 'approved' else 'danger' }}">
+                                {{ leave.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info" data-bs-toggle="modal" 
+                                        data-bs-target="#viewLeaveModal"
+                                        data-student-name="{{ leave.student_name }}"
+                                        data-leave-period="{{ leave.start_date.strftime('%b %d, %Y') }} to {{ leave.end_date.strftime('%b %d, %Y') }}"
+                                        data-reason="{{ leave.reason }}"
+                                        data-document="{{ leave.supporting_document or '' }}"
+                                        data-admin-comments="{{ leave.admin_comments or '' }}"
+                                        data-leave-type="{{ leave.type_name | title if leave.type_name else 'N/A' }}"
+                                        data-batch-name="{{ leave.batch_name or 'N/A' }}"
+                                        data-leave-status="{{ leave.status }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if leave.status == 'pending' %}
+                                <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#actionModal" data-leave-id="{{ leave.leave_id }}" data-action="approved">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#actionModal" data-leave-id="{{ leave.leave_id }}" data-action="rejected">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Action Modal (For Approve/Reject) -->
+<div class="modal fade" id="actionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actionModalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="leaveActionForm">
+                <input type="hidden" id="action_leave_id" name="leave_id">
+                <input type="hidden" id="action_status" name="status">
+                <div class="modal-body">
+                    <p id="actionModalText"></p>
+                    <div class="mb-3">
+                        <label for="action_comments" class="form-label" id="commentsLabel">Comments (Optional)</label>
+                        <textarea class="form-control" id="action_comments" name="comments" rows="3"></textarea>
+                         <div class="invalid-feedback" id="comments-error"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn" id="actionModalSubmitBtn">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Leave Modal (For Details) -->
+<div class="modal fade" id="viewLeaveModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Leave Application Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 class="mb-3">Student: <span id="viewStudentName" class="text-primary"></span></h6>
+                <p><strong>Leave Period:</strong> <span id="viewLeavePeriod"></span></p>
+                <p><strong>Leave Type:</strong> <span id="viewLeaveType"></span></p>
+                <p><strong>Batch:</strong> <span id="viewBatchName"></span></p>
+                <p><strong>Reason Provided:</strong></p>
+                <div class="p-3 bg-light rounded mb-3">
+                    <p id="viewReason" style="white-space: pre-wrap; overflow-wrap: break-word;"></p>
+                </div>
+                <div id="viewDocumentSection" style="display: none;">
+                    <p><strong>Supporting Document:</strong></p>
+                    <a href="#" id="viewDocumentLink" class="btn btn-success" target="_blank" download>
+                        <i class="fas fa-download me-2"></i>Download Document
+                    </a>
+                </div>
+                <div id="adminCommentsContainer" class="mt-3" style="display: none;"> 
+                    <p><strong>Admin Comments:</strong></p>
+                    <div class="p-3 bg-light rounded border">
+                        <p id="viewAdminComments" style="white-space: pre-wrap;"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    $('#leaveTable').DataTable({ 
+        responsive: true, 
+        order: [[4, 'desc']] // Default sort by 'Applied On' which is now column 4
+    });
+
+    const actionModalEl = document.getElementById('actionModal');
+    const actionForm = document.getElementById('leaveActionForm');
+    
+    actionModalEl.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const leaveId = button.dataset.leaveId;
+        const action = button.dataset.action;
+        
+        actionForm.querySelector('#action_leave_id').value = leaveId;
+        actionForm.querySelector('#action_status').value = action;
+        
+        const modalTitle = actionModalEl.querySelector('#actionModalTitle');
+        const modalText = actionModalEl.querySelector('#actionModalText');
+        const submitBtn = actionModalEl.querySelector('#actionModalSubmitBtn');
+        const commentsLabel = actionModalEl.querySelector('#commentsLabel');
+        const commentsInput = actionModalEl.querySelector('#action_comments');
+        
+        commentsInput.classList.remove('is-invalid');
+
+        if (action === 'approved') {
+            modalTitle.textContent = 'Approve Leave Application';
+            modalText.textContent = 'Are you sure you want to approve this leave?';
+            submitBtn.className = 'btn btn-success';
+            submitBtn.textContent = 'Approve';
+            commentsLabel.textContent = 'Comments (Optional)';
+        } else {
+            modalTitle.textContent = 'Reject Leave Application';
+            modalText.textContent = 'Are you sure you want to reject this leave? Please provide a reason.';
+            submitBtn.className = 'btn btn-danger';
+            submitBtn.textContent = 'Reject';
+            commentsLabel.textContent = 'Reason for Rejection *';
+        }
+    });
+
+    actionForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const leaveId = actionForm.querySelector('#action_leave_id').value;
+        const data = {
+            status: actionForm.querySelector('#action_status').value,
+            comments: actionForm.querySelector('#action_comments').value.trim()
+        };
+
+        if (data.status === 'rejected' && !data.comments) {
+            const commentsInput = actionForm.querySelector('#action_comments');
+            const errorDiv = actionForm.querySelector('#comments-error');
+            commentsInput.classList.add('is-invalid');
+            if(errorDiv) errorDiv.textContent = 'Rejection reason is required.';
+            return;
+        }
+
+        const response = await fetch(`/admin/update_leave_status/${leaveId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            if (result.errors) {
+                const commentsInput = actionForm.querySelector('#action_comments');
+                const errorDiv = actionForm.querySelector('#comments-error');
+                commentsInput.classList.add('is-invalid');
+                if(errorDiv) errorDiv.textContent = result.errors.comments;
+            } else {
+                alert('Error: ' + result.message);
+            }
+        }
+    });
+
+    const viewLeaveModalEl = document.getElementById('viewLeaveModal');
+    viewLeaveModalEl.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const data = button.dataset;
+
+        document.getElementById('viewStudentName').textContent = data.studentName;
+        document.getElementById('viewLeavePeriod').textContent = data.leavePeriod;
+        document.getElementById('viewReason').textContent = data.reason;
+        document.getElementById('viewLeaveType').textContent = data.leaveType;
+        document.getElementById('viewBatchName').textContent = data.batchName;
+
+        const docSection = document.getElementById('viewDocumentSection');
+        const docLink = document.getElementById('viewDocumentLink');
+        if (data.document) {
+            docLink.href = `{{ url_for('static', filename='') }}${data.document.replace('/static/', '')}`; 
+            docSection.style.display = 'block';
+        } else {
+            docSection.style.display = 'none';
+        }
+        
+        const adminCommentsContainer = document.getElementById('adminCommentsContainer');
+        if (data.adminComments && data.leaveStatus !== 'pending') {
+            document.getElementById('viewAdminComments').textContent = data.adminComments;
+            adminCommentsContainer.style.display = 'block';
+        } else {
+            adminCommentsContainer.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

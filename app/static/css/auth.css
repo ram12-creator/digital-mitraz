@@ -1,0 +1,58 @@
+/* ===================================================================
+   AUTHENTICATION PAGES STYLES - DIGITAL MITRAZ - PREMIUM REDESIGN
+   =================================================================== */
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #F4F7FC 0%, #E9ECF5 100%);
+    padding: 2rem;
+    font-family: 'Poppins', sans-serif;
+}
+
+.auth-card {
+    background: #fff;
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-header {
+    background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+    color: white;
+    padding: 3rem;
+    text-align: center;
+    border-top-left-radius: 1.25rem;
+    border-top-right-radius: 1.25rem;
+}
+
+.auth-header h2 {
+    font-weight: 800;
+    font-size: 2rem;
+    color: #fff;
+}
+
+.auth-body {
+    padding: 3rem;
+}
+
+.auth-btn {
+    background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.8rem 2rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+    width: 100%;
+    box-shadow: 0 5px 15px rgba(74, 144, 226, 0.4);
+}

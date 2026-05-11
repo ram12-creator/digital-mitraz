@@ -1,0 +1,36 @@
+# Environment variables
+# This is the most important line to keep your secrets safe!
+.env
+
+# Virtual Environment
+# Ignores the folder containing all installed Python packages.
+mitraz/
+
+# Python cache files and artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# IDE and editor configuration files
+.idea/
+.vscode/
+*.swp
+*.suo
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Celery files
+celerybeat-schedule
+
+# Instance folder (good practice for Flask)
+/instance
+
+# User-uploaded files
+app/static/uploads/

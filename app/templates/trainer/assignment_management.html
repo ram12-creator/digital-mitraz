@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Assignment Management{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('trainer.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Assignment Management</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Assignment Management</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAssignmentModal">
+                <i class="fas fa-plus me-2"></i>Create Assignment
+            </button>
+        </div>
+        <p class="text-muted">Manage assignments for your courses and topics.</p>
+    </div>
+</div>
+
+<!-- Assignments Table -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">All Assignments</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="assignmentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Course</th>
+                        <th>Topic</th>
+                        <th>Due Date</th>
+                        <th>Type</th>
+                        <th>Max Points</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.title }}</td>
+                        <td>{{ assignment.course_name }}</td>
+                        <td>{{ assignment.topic_name }}</td>
+                        <td>{{ assignment.due_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'info' if assignment.assignment_type == 'individual' else 'warning' }}">
+                                {{ assignment.assignment_type|title }}
+                            </span>
+                        </td>
+                        <td>{{ assignment.max_points }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if assignment.is_active else 'secondary' }}">
+                                {{ 'Active' if assignment.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" 
+                                        data-bs-target="#editAssignmentModal" data-assignment-id="{{ assignment.assignment_id }}"
+                                        data-title="{{ assignment.title }}" data-description="{{ assignment.description }}"
+                                        data-topic-id="{{ assignment.topic_id }}" data-due-date="{{ assignment.due_date.strftime('%Y-%m-%dT%H:%M') }}"
+                                        data-assignment-type="{{ assignment.assignment_type }}" data-max-points="{{ assignment.max_points }}"
+                                        data-status="{{ assignment.is_active }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="{{ url_for('trainer.view_submissions', assignment_id=assignment.assignment_id) }}" 
+                                   class="btn btn-outline-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-outline-danger" onclick="confirmDelete('{{ assignment.assignment_id }}', '{{ assignment.title }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Assignment Modal -->
+<div class="modal fade" id="createAssignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createAssignmentForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="title" class="form-label">Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="topicId" class="form-label">Topic *</label>
+                            <select class="form-select" id="topicId" name="topic_id" required>
+                                <option value="">Select Topic</option>
+                                {% for topic in topics %}
+                                <option value="{{ topic.topic_id }}">{{ topic.topic_name }} ({{ topic.course_name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="dueDate" class="form-label">Due Date *</label>
+                            <input type="datetime-local" class="form-control" id="dueDate" name="due_date" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="assignmentType" class="form-label">Type *</label>
+                            <select class="form-select" id="assignmentType" name="assignment_type" required>
+                                <option value="individual">Individual</option>
+                                <option value="group">Group</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="maxPoints" class="form-label">Max Points</label>
+                            <input type="number" class="form-control" id="maxPoints" name="max_points" min="0" value="100">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assignmentFile" class="form-label">Assignment File (Optional)</label>
+                        <input type="file" class="form-control" id="assignmentFile" name="assignment_file">
+                        <div class="form-text">Upload assignment instructions or materials</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Assignment</button>
+</div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Assignment Modal -->
+<div class="modal fade" id="editAssignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editAssignmentForm" enctype="multipart/form-data">
+                <input type="hidden" id="editAssignmentId" name="assignment_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editTitle" class="form-label">Title *</label>
+                            <input type="text" class="form-control" id="editTitle" name="title" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editTopicId" class="form-label">Topic *</label>
+                            <select class="form-select" id="editTopicId" name="topic_id" required>
+                                <option value="">Select Topic</option>
+                                {% for topic in topics %}
+                                <option value="{{ topic.topic_id }}">{{ topic.topic_name }} ({{ topic.course_name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="editDueDate" class="form-label">Due Date *</label>
+                            <input type="datetime-local" class="form-control" id="editDueDate" name="due_date" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editAssignmentType" class="form-label">Type *</label>
+                            <select class="form-select" id="editAssignmentType" name="assignment_type" required>
+                                <option value="individual">Individual</option>
+                                <option value="group">Group</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="editMaxPoints" class="form-label">Max Points</label>
+                            <input type="number" class="form-control" id="editMaxPoints" name="max_points" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editAssignmentFile" class="form-label">Assignment File (Optional)</label>
+                        <input type="file" class="form-control" id="editAssignmentFile" name="assignment_file">
+                        <div class="form-text">Upload new file to replace existing one</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="editIsActive" name="is_active">
+                            <label class="form-check-label" for="editIsActive">Active Assignment</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize DataTable
+    $(document).ready(function() {
+        $('#assignmentsTable').DataTable({
+            pageLength: 10,
+            ordering: true,
+            responsive: true,
+            order: [[3, 'desc']] // Sort by due date descending
+        });
+    });
+
+    // Handle create assignment form submission
+    $('#createAssignmentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('{{ url_for("trainer.create_assignment") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Assignment created successfully');
+                $('#createAssignmentModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while creating the assignment');
+        });
+    });
+
+    // Handle edit assignment modal show
+    $('#editAssignmentModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        const modal = $(this);
+        
+        modal.find('#editAssignmentId').val(button.data('assignment-id'));
+        modal.find('#editTitle').val(button.data('title'));
+        modal.find('#editDescription').val(button.data('description'));
+        modal.find('#editTopicId').val(button.data('topic-id'));
+        modal.find('#editDueDate').val(button.data('due-date'));
+        modal.find('#editAssignmentType').val(button.data('assignment-type'));
+        modal.find('#editMaxPoints').val(button.data('max-points'));
+        modal.find('#editIsActive').prop('checked', button.data('status'));
+    });
+
+    // Handle edit assignment form submission
+    $('#editAssignmentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        // Correctly get boolean value from checkbox
+        formData.append('is_active', $('#editIsActive').is(':checked'));
+        
+        const assignmentId = $('#editAssignmentId').val();
+
+        fetch('{{ url_for("trainer.update_assignment", assignment_id=0) }}'.replace('0', assignmentId), {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Assignment updated successfully');
+                $('#editAssignmentModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the assignment');
+        });
+    });
+
+    // Confirm assignment deletion
+    function confirmDelete(assignmentId, assignmentTitle) {
+        if (confirm(`Are you sure you want to delete the assignment "${assignmentTitle}"? This action cannot be undone and will delete all student submissions.`)) {
+            fetch('{{ url_for("trainer.delete_assignment", assignment_id=0) }}'.replace('0', assignmentId), {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Assignment deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the assignment');
+            });
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Student Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+             <div>
+                 <h1 class="h3 mb-1 text-gray-800">Student Directory</h1>
+                 <p class="text-muted small mb-0">Manage enrollments, track history, and process dropouts.</p>
+             </div>
+            <div class="btn-toolbar mb-2 gap-2">
+                <!-- Filter Trigger -->
+                <button class="btn btn-white shadow-sm border" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                    <i class="fas fa-filter text-primary me-2"></i>Filters
+                </button>
+                <!-- New Enrollment Link (Links to Wizard) -->
+                <a href="{{ url_for('admin.add_student_wizard') }}" class="btn btn-primary shadow-sm">
+                    <i class="fas fa-user-plus me-2"></i>New Enrollment
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Panel (Collapsible) -->
+<div class="collapse mb-4 {{ 'show' if selected_course or selected_batch else '' }}" id="filterPanel">
+    <div class="card shadow-sm border-left-primary">
+        <div class="card-body bg-light">
+            <form method="GET" action="{{ url_for('admin.student_management') }}">
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-2">
+                        <label class="small text-muted fw-bold">Filter by Course</label>
+                        <select class="form-select" id="filterCourse" name="course_id">
+                            <option value="">All Courses</option>
+                            {% for course in courses %}
+                            <option value="{{ course.course_id }}" {% if course.course_id|string == selected_course|string %}selected{% endif %}>
+                                {{ course.course_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="small text-muted fw-bold">Filter by Batch</label>
+                        <select class="form-select" id="filterBatch" name="batch_id">
+                            <option value="">Select Course First</option>
+                            <!-- Batches loaded via JS -->
+                            {% for batch in batches %}
+                            <option value="{{ batch.batch_id }}" {% if batch.batch_id|string == selected_batch|string %}selected{% endif %}>
+                                {{ batch.batch_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i> Apply</button>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('admin.student_management') }}" class="btn btn-outline-secondary w-100">Reset</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Students Table -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3 border-0">
+        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-list me-2"></i>Enrolled Beneficiaries</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="studentsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Beneficiary</th>
+                        <th>Contact Info</th>
+                        <th>Batch / Course</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3 bg-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold border" style="width: 40px; height: 40px;">
+                                    {{ student.full_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ student.full_name }}</div>
+                                    <div class="small text-muted">ID: {{ student.enrollment_id or 'Pending' }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column small">
+                                <span><i class="fas fa-envelope fa-fw text-muted me-1"></i> {{ student.email }}</span>
+                                <span><i class="fas fa-phone fa-fw text-muted me-1"></i> {{ student.phone }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-dark mb-1">{{ student.batch_name or 'Unassigned' }}</span>
+                            <div class="small text-muted text-truncate" style="max-width: 150px;">{{ student.course_name }}</div>
+                        </td>
+                        <td>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input status-toggle" type="checkbox" 
+                                       data-user-id="{{ student.user_id }}"
+                                       {{ 'checked' if student.is_active else '' }}>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group shadow-sm">
+                                <!-- 1. View Summary (Modal) -->
+                                <button class="btn btn-sm btn-light border view-student-btn"
+                                        data-student-id="{{ student.student_id }}"
+                                        data-bs-toggle="tooltip" title="360° View">
+                                    <i class="fas fa-eye text-info"></i>
+                                </button>
+                                
+                                <!-- 2. Edit Profile (Links to Wizard in Edit Mode) -->
+                                <a href="{{ url_for('admin.manage_student', student_id=student.student_id) }}" 
+                                   class="btn btn-sm btn-light border"
+                                   data-bs-toggle="tooltip" title="Edit Full Profile">
+                                    <i class="fas fa-edit text-primary"></i>
+                                </a>
+
+                                <!-- 3. Download PDF Report -->
+                                <a href="{{ url_for('admin.download_student_pdf', student_id=student.student_id) }}" 
+                                   class="btn btn-sm btn-light border"
+                                   target="_blank"
+                                   data-bs-toggle="tooltip" title="Download Report">
+                                    <i class="fas fa-file-pdf text-danger"></i>
+                                </a>
+                                
+                                <!-- 4. Request Dropout (Maker-Checker) -->
+                                <button class="btn btn-sm btn-light border" 
+                                        onclick="requestDropout({{ student.student_id }})"
+                                        data-bs-toggle="tooltip" title="Request Dropout">
+                                    <i class="fas fa-user-times text-warning"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- STUDENT 360 VIEW MODAL -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-id-card-alt me-2"></i>Beneficiary 360° View</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light p-0" id="studentDetailsContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    $('#studentsTable').DataTable({ responsive: true, order: [[0, 'asc']] });
+
+    // --- 1. FILTER LOGIC ---
+    const courseSelect = document.getElementById('filterCourse');
+    const batchSelect = document.getElementById('filterBatch');
+
+    courseSelect.addEventListener('change', async function() {
+        const courseId = this.value;
+        batchSelect.innerHTML = '<option value="">Loading...</option>';
+        if (!courseId) { batchSelect.innerHTML = '<option value="">All Batches</option>'; return; }
+        
+        try {
+            const response = await fetch(`/admin/get_batches/${courseId}`);
+            const data = await response.json();
+            batchSelect.innerHTML = '<option value="">All Batches</option>';
+            if (data.success) {
+                data.batches.forEach(batch => {
+                    batchSelect.innerHTML += `<option value="${batch.batch_id}">${batch.batch_name}</option>`;
+                });
+            }
+        } catch (e) { console.error(e); }
+    });
+
+    // --- 2. DROPOUT REQUEST LOGIC ---
+    window.requestDropout = async function(id) {
+        if(!confirm("Are you sure? This will send a Dropout Request to the Super Admin. The student will remain active until approved.")) return;
+        try {
+            const res = await fetch(`/admin/request_student_dropout/${id}`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+        } catch(e) { alert("Error connecting to server"); }
+    };
+
+    // --- STUDENT 360 VIEW MODAL LOGIC ---
+    const detailsModal = new bootstrap.Modal(document.getElementById('studentDetailsModal'));
+    let modalChart = null; 
+
+    document.body.addEventListener('click', async function(e) {
+        // Use event delegation to handle clicks even after table pagination
+        const btn = e.target.closest('.view-student-btn');
+        if (!btn) return;
+        
+        const id = btn.dataset.studentId;
+        detailsModal.show();
+        
+        const content = document.getElementById('studentDetailsContent');
+        content.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading Profile...</p></div>';
+
+        try {
+            const res = await fetch(`/admin/get_student_details/${id}`);
+            const data = await res.json();
+            
+            if (data.success) {
+                const d = data.details;
+                const stats = data.att_stats;
+                
+                // Safe handling for image
+                const profilePic = d.profile_picture 
+                    ? `{{ url_for('static', filename='uploads/profile_pictures/') }}${d.profile_picture}` 
+                    : `{{ url_for('static', filename='images/logo.png') }}`;
+
+                content.innerHTML = `
+                    <div class="row g-0">
+                        <!-- LEFT PANEL -->
+                        <div class="col-lg-4 border-end bg-white p-4 text-center">
+                            <img src="${profilePic}" class="rounded-circle border p-1 mb-3 shadow-sm" width="120" height="120" style="object-fit: cover;">
+                            <h4 class="fw-bold text-dark mb-0">${d.full_name}</h4>
+                            <small class="text-muted">${d.enrollment_id || 'ID Pending'}</small>
+                            <div class="mt-2">
+                                <span class="badge bg-${d.is_active ? 'success' : 'secondary'}">${d.is_active ? 'Active' : 'Inactive'}</span>
+                                <span class="badge bg-info text-dark">${d.batch_name || 'No Batch'}</span>
+                            </div>
+                            
+                            <div class="text-start mt-4 small text-muted">
+                                <p class="mb-1"><i class="fas fa-envelope me-2"></i> ${d.email}</p>
+                                <p class="mb-1"><i class="fas fa-phone me-2"></i> ${d.phone}</p>
+                                <p class="mb-1"><i class="fas fa-id-card me-2"></i> ${d.aadhar_number || 'N/A'}</p>
+                                <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i> ${d.city || 'N/A'}</p>
+                            </div>
+
+                            <hr>
+                            <h6 class="fw-bold text-primary">Attendance: ${d.attendance_percentage}%</h6>
+                            <div style="height: 180px; position: relative;">
+                                <canvas id="modalAttChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT PANEL -->
+                        <div class="col-lg-8 p-4 bg-light">
+                            <ul class="nav nav-tabs nav-fill mb-3" id="viewTabs">
+                                <li class="nav-item">
+                                    <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-att">
+                                        <i class="fas fa-calendar-check me-2"></i> Attendance
+                                    </button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-leave">
+                                        <i class="fas fa-envelope-open me-2"></i> Leaves
+                                    </button>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content">
+                                <!-- Attendance List -->
+                                <div class="tab-pane fade show active" id="tab-att">
+                                    <div class="table-responsive bg-white border rounded" style="max-height: 400px;">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light sticky-top"><tr><th>Date</th><th>Status</th><th>Note</th></tr></thead>
+                                            <tbody>
+                                                ${data.att_history.map(r => `
+                                                    <tr>
+                                                        <td>${r.attendance_date}</td>
+                                                        <td><span class="badge bg-${getStatusColor(r.status)}">${r.status}</span></td>
+                                                        <td class="small text-muted">${r.notes || '-'}</td>
+                                                    </tr>
+                                                `).join('') || '<tr><td colspan="3" class="text-center p-3">No records found</td></tr>'}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Leave List -->
+                                <div class="tab-pane fade" id="tab-leave">
+                                    <div class="table-responsive bg-white border rounded" style="max-height: 400px;">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead class="table-light sticky-top"><tr><th>Type</th><th>Dates</th><th>Status</th><th>Note</th></tr></thead>
+                                            <tbody>
+                                                ${data.leaves.map(l => `
+                                                    <tr>
+                                                        <td>${l.type_name || 'Leave'}</td>
+                                                        <td class="small">${l.start_date} to ${l.end_date}</td>
+                                                        <td><span class="badge bg-${l.status == 'approved' ? 'success' : l.status == 'rejected' ? 'danger' : 'warning'}">${l.status}</span></td>
+                                                        <td class="small text-muted">${l.admin_comments || '-'}</td>
+                                                    </tr>
+                                                `).join('') || '<tr><td colspan="4" class="text-center p-3">No leave history</td></tr>'}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Render Chart
+                if (modalChart) modalChart.destroy();
+                const ctx = document.getElementById('modalAttChart').getContext('2d');
+                
+                // Handle case where stats might be null (new student)
+                const p = stats?.present_count || 0;
+                const a = stats?.absent_count || 0;
+                const h = stats?.half_day_count || 0;
+                const l = stats?.leave_count || 0;
+
+                if (p+a+h+l === 0) {
+                     // Empty Chart visual
+                     modalChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#e9ecef'] }] },
+                        options: { events: [], plugins: { legend: { display: false } } }
+                     });
+                } else {
+                    modalChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Present', 'Absent', 'Half Day', 'Leave'],
+                            datasets: [{
+                                data: [p, a, h, l],
+                                backgroundColor: ['#198754', '#dc3545', '#ffc107', '#0dcaf0'],
+                                borderWidth: 2,
+                                borderColor: '#ffffff'
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 10 } } } } 
+                        }
+                    });
+                }
+
+            } else {
+                content.innerHTML = `<div class="alert alert-danger m-3">${data.message}</div>`;
+            }
+        } catch (e) {
+            console.error(e);
+            content.innerHTML = `<div class="alert alert-danger m-3">Failed to load data.</div>`;
+        }
+    });
+
+    function getStatusColor(status) {
+        if(status === 'PRESENT') return 'success';
+        if(status === 'ABSENT') return 'danger';
+        if(status.includes('HALF')) return 'warning';
+        return 'info';
+    }
+
+    // --- 3. VIEW MODAL (Logic is same as previously provided, ensures chart renders) ---
+    // (This part assumes the modal logic provided in previous steps is integrated here or loaded via main.js)
+    // To ensure it works, paste the Modal Logic I provided in the previous "Student View" response here if needed.
+});
+</script>
+{% endblock %}

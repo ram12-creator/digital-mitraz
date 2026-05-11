@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h4 class="text-dark fw-bold m-0"><i class="fas fa-calendar-check text-primary me-2"></i>Daily Attendance</h4>
+        <p class="text-muted small mb-0">Mark and track student attendance. Records are locked for past dates.</p>
+    </div>
+</div>
+
+<!-- FILTER SECTION -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="m-0 font-weight-bold text-dark text-uppercase small ls-1">Select Class & Date</h6>
+    </div>
+    <div class="card-body bg-light">
+        <form id="filterForm" method="GET" action="{{ url_for('admin.attendance_management') }}">
+            <div class="row align-items-end g-3">
+                <div class="col-md-4">
+                    <label class="small text-muted fw-bold mb-1">Course</label>
+                    <select class="form-select" id="course_filter" name="course_id">
+                        <option value="">Select Course</option>
+                        {% for course in courses %}
+                        <option value="{{ course.course_id }}" {% if selected_course == course.course_id|string %}selected{% endif %}>
+                            {{ course.course_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="small text-muted fw-bold mb-1">Batch</label>
+                    <select class="form-select" id="batch_filter" name="batch_id">
+                        <option value="">Select a course first</option>
+                         {% for batch in batches %}
+                        <option value="{{ batch.batch_id }}" {% if selected_batch == batch.batch_id|string %}selected{% endif %}>
+                            {{ batch.batch_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="small text-muted fw-bold mb-1">Date</label>
+                    <!-- 'max' prevents future dates selection -->
+                    <input type="date" class="form-control" id="date_filter" name="date" 
+                           value="{{ selected_date }}" 
+                           max="{{ now.strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="col-md-2">
+                     <button type="submit" class="btn btn-primary w-100 fw-bold">
+                        <i class="fas fa-search me-2"></i>Load
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if attendance_data %}
+<!-- MAIN ATTENDANCE TABLE -->
+<div class="card shadow border-0 mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="m-0 fw-bold text-primary">Class List: <span class="text-dark">{{ selected_date }}</span></h6>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- These buttons will be disabled by JS if date is not today -->
+            <button class="btn btn-sm btn-outline-success" id="markAllPresent">
+                <i class="fas fa-check-double me-1"></i> Mark All Present
+            </button>
+            <button class="btn btn-primary" id="saveAttendanceBtn">
+                <i class="fas fa-save me-2"></i> Save Data
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-dark text-white">
+                    <tr>
+                        <th class="ps-4">Student Name</th>
+                        <th>Status</th>
+                        <th>Remarks/State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in attendance_data %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-weight: bold;">
+                                    {{ student.full_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ student.full_name }}</div>
+                                    <div class="small text-muted">{{ student.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <!-- STATUS DROPDOWN -->
+                            <select class="form-select form-select-sm attendance-select fw-bold" 
+                                    data-student-id="{{ student.student_id }}"
+                                    style="width: 220px;">
+                                
+                                <option value="PRESENT" class="text-success" {% if student.status == 'PRESENT' %}selected{% endif %}>Present</option>
+                                <option value="ABSENT" class="text-danger" {% if student.status == 'ABSENT' %}selected{% endif %}>Absent</option>
+                                <option value="HALF_DAY_MORNING" class="text-warning" {% if student.status == 'HALF_DAY_MORNING' %}selected{% endif %}>Half Day (AM Present)</option>
+                                <option value="HALF_DAY_AFTERNOON" class="text-warning" {% if student.status == 'HALF_DAY_AFTERNOON' %}selected{% endif %}>Half Day (PM Present)</option>
+                                
+                                <!-- Special Statuses -->
+                                {% if student.status == 'LEAVE' %}
+                                    <option value="LEAVE" class="text-info" selected>On Leave (Approved)</option>
+                                {% else %}
+                                    <option value="LEAVE" class="text-info">On Leave</option>
+                                {% endif %}
+
+                                {% if student.status == 'HOLIDAY' %}
+                                    <option value="HOLIDAY" selected disabled>Holiday</option>
+                                {% endif %}
+                            </select>
+                        </td>
+                        <td>
+                            {% if student.marked %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Saved</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+                            
+                            {% if student.status == 'HOLIDAY' %}
+                                <span class="badge bg-info ms-1">Holiday</span>
+                            {% elif student.status == 'LEAVE' %}
+                                <span class="badge bg-warning text-dark ms-1">Leave</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% elif selected_batch and selected_date %}
+<div class="alert alert-warning text-center m-4 p-4 shadow-sm border-0">
+    <i class="fas fa-users-slash fa-3x mb-3 text-warning"></i>
+    <h5>No Students Found</h5>
+    <p>There are no active students enrolled in this batch yet.</p>
+</div>
+{% endif %}
+
+<!-- BOTTOM ACTIONS -->
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card h-100 shadow-sm border-left-info">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="font-weight-bold text-info">Export Report</h6>
+                    <p class="text-muted small mb-0">Download CSV attendance sheet for this batch.</p>
+                </div>
+                {% if selected_batch %}
+                <a href="{{ url_for('admin.export_attendance', batch_id=selected_batch) }}" class="btn btn-outline-info">
+                    <i class="fas fa-file-csv me-2"></i>Export
+                </a>
+                {% else %}
+                <button class="btn btn-outline-secondary" disabled>Select Batch</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card h-100 shadow-sm border-left-success">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="font-weight-bold text-success">Daily Statistics</h6>
+                    <p class="text-muted small mb-0">View visual breakdown for the selected date.</p>
+                </div>
+                {% if attendance_data %}
+                <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#statisticsModal">
+                    <i class="fas fa-chart-pie me-2"></i>View Stats
+                </button>
+                {% else %}
+                <button class="btn btn-outline-secondary" disabled>Load Data</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STATS MODAL -->
+<div class="modal fade" id="statisticsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Attendance Summary: {{ selected_date }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-center">
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between"><span>Total Students</span> <span class="fw-bold" id="statsTotal">0</span></li>
+                            <li class="list-group-item d-flex justify-content-between"><span class="text-success">Present</span> <span class="fw-bold" id="statsPresent">0</span></li>
+                            <li class="list-group-item d-flex justify-content-between"><span class="text-danger">Absent</span> <span class="fw-bold" id="statsAbsent">0</span></li>
+                            <li class="list-group-item d-flex justify-content-between"><span class="text-warning">Half Day</span> <span class="fw-bold" id="statsHalf">0</span></li>
+                            <li class="list-group-item d-flex justify-content-between"><span class="text-info">Leave/Holiday</span> <span class="fw-bold" id="statsOther">0</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let attendanceChartInstance = null;
+    const courseSelect = document.getElementById('course_filter');
+    const batchSelect = document.getElementById('batch_filter');
+    const dateInput = document.getElementById('date_filter');
+    const saveBtn = document.getElementById('saveAttendanceBtn');
+    const markAllBtn = document.getElementById('markAllPresent');
+
+    // --- 1. DYNAMIC BATCH LOADING ---
+    async function loadBatchesForCourse(courseId, selectedBatchId = null) {
+        if (!courseId) {
+            batchSelect.innerHTML = '<option value="">Select a course first</option>';
+            return;
+        }
+        batchSelect.innerHTML = '<option value="">Loading...</option>';
+        try {
+            const response = await fetch(`/admin/get_batches/${courseId}`);
+            const data = await response.json();
+            
+            batchSelect.innerHTML = '<option value="">Select Batch</option>';
+            if (data.success) {
+                data.batches.forEach(batch => {
+                    const selected = selectedBatchId && batch.batch_id == selectedBatchId ? 'selected' : '';
+                    batchSelect.innerHTML += `<option value="${batch.batch_id}" ${selected}>${batch.batch_name}</option>`;
+                });
+            }
+        } catch (e) { console.error(e); }
+    }
+    
+    courseSelect.addEventListener('change', () => loadBatchesForCourse(courseSelect.value));
+    if(courseSelect.value) loadBatchesForCourse(courseSelect.value, '{{ selected_batch }}');
+
+
+    // --- 2. DATE VALIDATION (Prevent Editing Past Dates) ---
+    function checkDatePermissions() {
+        if (!saveBtn) return; // If no table loaded
+
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const selected = dateInput.value;
+
+        if (selected !== today) {
+            // LOCK INTERFACE
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-lock me-2"></i> View Only (Past Date)';
+            saveBtn.classList.replace('btn-primary', 'btn-secondary');
+            
+            if(markAllBtn) markAllBtn.disabled = true;
+            
+            document.querySelectorAll('.attendance-select').forEach(el => {
+                el.disabled = true;
+                el.classList.add('bg-light');
+            });
+        } else {
+            // UNLOCK INTERFACE
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-2"></i> Save Attendance';
+            saveBtn.classList.replace('btn-secondary', 'btn-primary');
+            
+            if(markAllBtn) markAllBtn.disabled = false;
+            
+            document.querySelectorAll('.attendance-select').forEach(el => {
+                // Keep holidays disabled
+                if(el.value !== 'HOLIDAY') el.disabled = false;
+            });
+        }
+    }
+    checkDatePermissions();
+
+
+    // --- 3. MARK ALL PRESENT ---
+    markAllBtn?.addEventListener('click', () => {
+        document.querySelectorAll('.attendance-select').forEach(select => {
+            if (!select.disabled && select.value !== 'HOLIDAY' && select.value !== 'LEAVE') {
+                select.value = 'PRESENT';
+                select.classList.add('border-success');
+                setTimeout(() => select.classList.remove('border-success'), 500);
+            }
+        });
+    });
+
+
+    // --- 4. SAVE ATTENDANCE ---
+    saveBtn?.addEventListener('click', async function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+        btn.disabled = true;
+
+        const attendanceMap = {};
+        document.querySelectorAll('.attendance-select').forEach(select => {
+            attendanceMap[select.dataset.studentId] = select.value;
+        });
+        
+        const data = {
+            batch_id: batchSelect.value,
+            attendance_date: dateInput.value,
+            attendance_map: attendanceMap
+        };
+
+        try {
+            const response = await fetch('{{ url_for("admin.mark_attendance") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            
+            if(result.success) {
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Saved!';
+                btn.classList.replace('btn-primary', 'btn-success');
+                setTimeout(() => { location.reload(); }, 1000);
+            } else {
+                alert(result.message); // Show backend error (e.g., Backdating attempt)
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Connection Error");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    });
+
+
+    // --- 5. STATISTICS CHART ---
+    const statsModalEl = document.getElementById('statisticsModal');
+    statsModalEl?.addEventListener('show.bs.modal', function() {
+        let counts = { PRESENT: 0, ABSENT: 0, HALF: 0, OTHER: 0, TOTAL: 0 };
+        const selects = document.querySelectorAll('.attendance-select');
+        counts.TOTAL = selects.length;
+
+        selects.forEach(sel => {
+            const val = sel.value;
+            if (val === 'PRESENT') counts.PRESENT++;
+            else if (val === 'ABSENT') counts.ABSENT++;
+            else if (val.includes('HALF')) counts.HALF++;
+            else counts.OTHER++;
+        });
+
+        document.getElementById('statsTotal').textContent = counts.TOTAL;
+        document.getElementById('statsPresent').textContent = counts.PRESENT;
+        document.getElementById('statsAbsent').textContent = counts.ABSENT;
+        document.getElementById('statsHalf').textContent = counts.HALF;
+        document.getElementById('statsOther').textContent = counts.OTHER;
+
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        if(attendanceChartInstance) attendanceChartInstance.destroy();
+        
+        attendanceChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Absent', 'Half Day', 'Other'],
+                datasets: [{
+                    data: [counts.PRESENT, counts.ABSENT, counts.HALF, counts.OTHER],
+                    backgroundColor: ['#198754', '#dc3545', '#ffc107', '#0dcaf0'],
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    });
+});
+</script>
+{% endblock %}

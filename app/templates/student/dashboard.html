@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">Student Dashboard</h1>
+        <p class="text-muted">Welcome back, {{ current_user.full_name }}! Here's your learning command center.</p>
+    </div>
+</div>
+
+<!-- KPI Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Attendance</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.attendance_percentage or 0 }}%</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-calendar-check fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Assignments Submitted</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.submitted_assignments or 0 }}/{{ stats.total_assignments or 0 }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-tasks fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                 <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Average Points</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.average_grade or 0 }}%</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-star-half-alt fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <a href="{{ url_for('student.leave_management') }}" class="text-decoration-none">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Leaves Available</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.remaining_leaves }}/{{ stats.max_leaves }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-calendar-times fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard Content -->
+<div class="row">
+    <!-- Grade Trajectory Chart (Main Chart) -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Your Points Trajectory</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="gradeTrajectoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topic Performance (Side Chart) -->
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Performance by Topic</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="topicPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actionable Lists: Deadlines and Feedback -->
+<div class="row">
+    <!-- Upcoming Deadlines -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-clock me-2"></i>Upcoming Deadlines</h6>
+            </div>
+            <div class="card-body">
+                {% if upcoming_assignments %}
+                <ul class="list-group list-group-flush">
+                    {% for assignment in upcoming_assignments %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ assignment.title }}</strong>
+                            <small class="text-muted d-block">{{ assignment.topic_name }}</small>
+                        </div>
+                        {% set days_left = (assignment.due_date - now).days %}
+                        <span class="badge bg-{{ 'danger' if days_left < 2 else 'warning' if days_left < 4 else 'success' }} rounded-pill">
+                            Due in {{ days_left }} day{{ 's' if days_left != 1 }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="alert alert-success text-center mb-0">No upcoming deadlines. You're all caught up!</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Feedback -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-comment-dots me-2"></i>Recent Feedback</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_feedback %}
+                <ul class="list-group list-group-flush">
+                {% for item in recent_feedback %}
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ item.title }}</h6>
+                            <span class="badge bg-{{ 'success' if item.grade >= 80 else 'warning' if item.grade >= 60 else 'danger' }}">{{ item.grade }}%</span>
+                        </div>
+                        <p class="mb-1 text-muted"><em>"{{ item.feedback or 'No detailed feedback provided.' }}"</em></p>
+                        <small>Graded on {{ item.graded_at.strftime('%b %d, %Y') }}</small>
+                    </li>
+                {% endfor %}
+                </ul>
+                {% else %}
+                <div class="alert alert-info text-center mb-0">No feedback has been provided on your submissions yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
+
+    // --- 1. Grade Trajectory Chart (Line Chart) ---
+    const trajectoryCtx = document.getElementById('gradeTrajectoryChart')?.getContext('2d');
+    if (trajectoryCtx && chartData.grade_trajectory && chartData.grade_trajectory.labels.length > 0) {
+        
+        // Create a gradient for the line chart background
+        const gradient = trajectoryCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(111, 66, 193, 0.4)'); // Vibrant Purple
+        gradient.addColorStop(1, 'rgba(111, 66, 193, 0)');
+
+        new Chart(trajectoryCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.grade_trajectory.labels,
+                datasets: [{
+                    label: 'Grade (%)',
+                    data: chartData.grade_trajectory.data,
+                    borderColor: '#6f42c1', // Vibrant Purple
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#6f42c1',
+                    pointHoverRadius: 7,
+                    pointHoverBorderWidth: 2,
+                    pointBorderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        suggestedMax: 100, 
+                        grid: { color: '#e9ecef' } 
+                    },
+                    x: { 
+                        grid: { display: false } 
+                    }
+                },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#343a40',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        padding: 10,
+                        cornerRadius: 4,
+                        displayColors: false
+                    }
+                },
+                interaction: { 
+                    intersect: false, 
+                    mode: 'index' 
+                }
+            }
+        });
+    } else if (trajectoryCtx) {
+        trajectoryCtx.font = "16px 'Poppins', sans-serif";
+        trajectoryCtx.fillStyle = "#858796";
+        trajectoryCtx.textAlign = "center";
+        trajectoryCtx.fillText("Your grades will appear here as they are marked.", trajectoryCtx.canvas.width / 2, trajectoryCtx.canvas.height / 2);
+    }
+
+    // --- 2. Topic Performance Chart (Polar Area Chart for better visuals) ---
+    const topicCtx = document.getElementById('topicPerformanceChart')?.getContext('2d');
+    if (topicCtx && chartData.topic_performance && chartData.topic_performance.labels.length > 0) {
+        
+        // Define a dynamic color palette
+        const colors = [
+            '#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545',
+            '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'
+        ];
+
+        new Chart(topicCtx, {
+            type: 'polarArea', // Changed from 'radar' for a different visual style
+            data: {
+                labels: chartData.topic_performance.labels,
+                datasets: [{
+                    label: 'Average Grade',
+                    data: chartData.topic_performance.data,
+                    backgroundColor: colors.map(color => color + 'B3'), // Add alpha for transparency
+                    borderColor: colors,
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        grid: { color: '#e9ecef' },
+                        angleLines: { color: '#e9ecef' },
+                        pointLabels: { 
+                            font: { size: 12, weight: 'bold' }
+                        }
+                    }
+                },
+                plugins: { 
+                    legend: { 
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: ${context.raw}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else if (topicCtx) {
+        topicCtx.font = "16px 'Poppins', sans-serif";
+        topicCtx.fillStyle = "#858796";
+        topicCtx.textAlign = "center";
+        topicCtx.fillText("Topic performance will show here after grading.", topicCtx.canvas.width / 2, topicCtx.canvas.height / 2);
+    }
+});
+</script>
+{% endblock %}

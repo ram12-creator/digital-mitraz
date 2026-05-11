@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Trainer Management - Digital Mitarz{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('super_admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Trainer Management</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Trainer Management</h1>
+            <a href="{{ url_for('super_admin.create_trainer') }}" class="btn btn-primary">
+                <i class="fas fa-chalkboard-teacher me-2"></i>Create New Trainer
+            </a>
+        </div>
+        <p class="text-muted">Manage all trainers and their course assignments.</p>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Filter Trainers</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <input type="text" class="form-control" id="searchTrainers" placeholder="Search by name or email...">
+            </div>
+            <div class="col-md-6 mb-3">
+                <select class="form-select" id="courseFilter">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                    <option value="{{ course.course_id }}">{{ course.course_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trainers Grid -->
+<div class="row" id="trainersContainer">
+    {% for trainer in trainers %}
+    <div class="col-xl-4 col-lg-6 mb-4 trainer-card">
+        <div class="card shadow h-100 hover-card">
+            <div class="card-body text-center">
+                <div class="position-relative d-inline-block">
+                    {% if trainer.profile_picture %}
+                    <img src="{{ url_for('static', filename='uploads/profile_pictures/' + trainer.profile_picture) }}" 
+                         class="rounded-circle mb-3" width="100" height="100" alt="Trainer Avatar" style="object-fit: cover;">
+                    {% else %}
+                    <svg class="rounded-circle mb-3" width="100" height="100" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid slice" focusable="false">
+                        <title>{{ trainer.full_name }} Avatar</title>
+                        <rect width="100%" height="100%" fill="#6c757d"></rect>
+                        <text x="50%" y="50%" fill="#dee2e6" dy=".3em" text-anchor="middle" font-size="40">
+                            {{ trainer.first_name[0] if trainer.first_name }}{{ trainer.last_name[0] if trainer.last_name }}
+                        </text>
+                    </svg>
+                    {% endif %}
+                    <span class="position-absolute bottom-0 end-0 p-2 bg-{{ 'success' if trainer.is_active else 'secondary' }} rounded-circle">
+                    </span>
+                </div>
+                <h5 class="card-title">{{ trainer.full_name }}</h5>
+                <p class="text-muted mb-1">{{ trainer.email }}</p>
+                <p class="text-muted mb-2">{{ trainer.phone }}</p>
+                
+                {% if trainer.qualifications %}
+                <p class="small text-muted mb-2">{{ trainer.qualifications|truncate(50) }}</p>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <span class="badge bg-warning">Trainer</span>
+                    <span class="badge bg-{{ 'success' if trainer.is_active else 'secondary' }}">
+                        {{ 'Active' if trainer.is_active else 'Inactive' }}
+                    </span>
+                </div>
+                
+                <h6 class="mt-3">Assigned Courses:</h6>
+                <div class="assigned-courses mb-3">
+                    {% if trainer.assigned_courses %}
+                        {% for course in trainer.assigned_courses.split(',') %}
+                        <span class="badge bg-info me-1 mb-1">{{ course }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small">No courses assigned</p>
+                    {% endif %}
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" 
+                            data-bs-target="#assignCourseModal" 
+                            data-user-id="{{ trainer.user_id }}"
+                            data-user-name="{{ trainer.full_name }}"
+                            data-user-type="trainer"
+                            data-assigned-courses="{{ trainer.assigned_courses or '' }}">
+                        <i class="fas fa-plus me-1"></i>Assign Courses
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#trainerDetailsModal"
+                            data-trainer-id="{{ trainer.user_id }}"
+                            data-trainer-name="{{ trainer.full_name }}"
+                            data-trainer-email="{{ trainer.email }}"
+                            data-trainer-phone="{{ trainer.phone }}"
+                            data-trainer-qualifications="{{ trainer.qualifications or 'No qualifications provided' }}"
+                            data-trainer-status="{{ trainer.is_active }}"
+                            data-trainer-courses="{{ trainer.assigned_courses or 'No courses assigned' }}"
+                            data-trainer-picture="{% if trainer.profile_picture %}{{ url_for('static', filename='uploads/profile_pictures/' + trainer.profile_picture) }}{% else %}{{ url_for('static', filename='images/default-avatar.png') }}{% endif %}">
+                        <i class="fas fa-eye me-1"></i>Details
+                    </button>
+
+
+
+
+         
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Assign Course Modal -->
+<div class="modal fade" id="assignCourseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Courses to <span id="trainerName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignCourseForm" action="{{ url_for('super_admin.assign_course') }}" method="POST">
+                <input type="hidden" id="assignUserId" name="user_id">
+                <input type="hidden" id="assignUserType" name="user_type" value="trainer">
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Courses to Assign</label>
+                        <div class="row">
+                            {% for course in courses %}
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input course-checkbox" type="checkbox" 
+                                           name="course_ids" value="{{ course.course_id }}" 
+                                           id="course{{ course.course_id }}">
+                                    <label class="form-check-label" for="course{{ course.course_id }}">
+                                        {{ course.course_name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="current-assignments">
+                        <h6>Currently Assigned Courses:</h6>
+                        <div id="currentCourses" class="p-2 bg-light rounded"></div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assignments</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Trainer Details Modal -->
+<div class="modal fade" id="trainerDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Trainer Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <img id="detailPicture" src="" class="rounded-circle" width="80" height="80" alt="Trainer Avatar" style="object-fit: cover;">
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Name:</strong>
+                        <p id="detailName" class="mb-0"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong>
+                        <p id="detailStatus" class="mb-0"></p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Email:</strong>
+                        <p id="detailEmail" class="mb-0"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Phone:</strong>
+                        <p id="detailPhone" class="mb-0"></p>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Qualifications:</strong>
+                    <p id="detailQualifications" class="mb-0"></p>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Assigned Courses:</strong>
+                    <p id="detailCourses" class="mb-0"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle assign course modal
+$('#assignCourseModal').on('show.bs.modal', function(event) {
+    const button = $(event.relatedTarget);
+    const userId = button.data('user-id');
+    const userName = button.data('user-name');
+    const userType = button.data('user-type');
+    const assignedCourses = button.data('assigned-courses');
+    
+    $('#assignUserId').val(userId);
+    $('#assignUserType').val(userType);
+    $('#trainerName').text(userName);
+    
+    // Show currently assigned courses
+    if (assignedCourses) {
+        $('#currentCourses').html(assignedCourses.split(',').map(course => 
+            `<span class="badge bg-info me-1">${course.trim()}</span>`
+        ).join(''));
+    } else {
+        $('#currentCourses').html('<span class="text-muted">No courses assigned</span>');
+    }
+    
+    // Pre-check already assigned courses
+    $('.course-checkbox').prop('checked', false);
+    if (assignedCourses) {
+        assignedCourses.split(',').forEach(course => {
+            const courseName = course.trim();
+            $('.course-checkbox').each(function() {
+                if ($(this).next().text().trim() === courseName) {
+                    $(this).prop('checked', true);
+                }
+            });
+        });
+    }
+});
+
+// Handle trainer details modal
+$('#trainerDetailsModal').on('show.bs.modal', function(event) {
+    const button = $(event.relatedTarget);
+    const trainerName = button.data('trainer-name');
+    const trainerEmail = button.data('trainer-email');
+    const trainerPhone = button.data('trainer-phone');
+    const trainerQualifications = button.data('trainer-qualifications');
+    const trainerStatus = button.data('trainer-status');
+    const trainerCourses = button.data('trainer-courses');
+    const trainerPicture = button.data('trainer-picture');
+    
+    $('#detailPicture').attr('src', trainerPicture);
+    $('#detailName').text(trainerName);
+    $('#detailEmail').text(trainerEmail);
+    $('#detailPhone').text(trainerPhone);
+    $('#detailQualifications').text(trainerQualifications);
+    $('#detailStatus').html(trainerStatus ? 
+        '<span class="badge bg-success">Active</span>' : 
+        '<span class="badge bg-secondary">Inactive</span>');
+    $('#detailCourses').html(trainerCourses.split(',').map(course => 
+        `<span class="badge bg-info me-1 mb-1">${course.trim()}</span>`
+    ).join(''));
+});
+
+// Search and filter functionality
+$('#searchTrainers').on('keyup', function() {
+    const searchText = $(this).val().toLowerCase();
+    $('.trainer-card').each(function() {
+        const trainerText = $(this).text().toLowerCase();
+        $(this).toggle(trainerText.includes(searchText));
+    });
+});
+
+$('#courseFilter').on('change', function() {
+    const courseId = $(this).val();
+    if (!courseId) {
+        $('.trainer-card').show();
+        return;
+    }
+    
+    $('.trainer-card').each(function() {
+        const courses = $(this).find('.assigned-courses').text();
+        $(this).toggle(courses.includes($('#courseFilter option:selected').text()));
+    });
+});
+
+// Handle form submission
+$('#assignCourseForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = $(this).serialize();
+    
+    $.ajax({
+        type: 'POST',
+        url: $(this).attr('action'),
+        data: formData,
+        success: function(response) {
+            if (response.success) {
+                alert('Courses assigned successfully');
+                $('#assignCourseModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('An error occurred while assigning courses');
+        }
+    });
+});
+</script>
+
+<style>
+.hover-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+.assigned-courses {
+    min-height: 40px;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+
+{% block title %}Trainer Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-card { transition: all 0.3s ease; border-left-width: 4px; }
+    .chart-card:hover { transform: translateY(-5px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15)!important; }
+    .chart-container { min-height: 280px; position: relative; }
+    #performanceMatrixChart { cursor: pointer; }
+    .student-list-item { transition: background-color 0.2s ease; cursor: pointer; }
+    .student-list-item:hover { background-color: #f8f9fa; }
+    .student-list-item.active { background-color: #e9ecef; border-left: 3px solid #6f42c1; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div id="dashboardHeader">
+            <h1 class="h3 mb-0">Trainer's Tactical Command Center</h1>
+            <p class="text-muted">Interactive insights across all your students and batches.</p>
+        </div>
+        <div id="drillDownHeader" class="d-none">
+            <h1 class="h3 mb-0">Student Drill-Down: <span id="studentNameHeader" class="text-primary"></span></h1>
+            <button class="btn btn-sm btn-outline-secondary mt-2" id="resetDashboard">
+                <i class="fas fa-arrow-left me-2"></i>Back to Full View
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <!-- KPI cards go here... -->
+    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-primary shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Active Batches</div><div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active_batches or 0 }}</div></div><div class="col-auto"><i class="fas fa-layer-group fa-2x text-gray-300"></i></div></div></div></div></div>
+    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-success shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Students</div><div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_students or 0 }}</div></div><div class="col-auto"><i class="fas fa-users fa-2x text-gray-300"></i></div></div></div></div></div>
+    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-info shadow h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-info text-uppercase mb-1">Average Grade</div><div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.average_grade or 0 }}%</div></div><div class="col-auto"><i class="fas fa-graduation-cap fa-2x text-gray-300"></i></div></div></div></div></div>
+    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-danger shadow h-100 py-2"><a href="{{ url_for('trainer.assignment_management') }}" class="text-decoration-none"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Ungraded Submissions</div><div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.ungraded_submissions or 0 }}</div></div><div class="col-auto"><i class="fas fa-edit fa-2x text-gray-300"></i></div></div></div></a></div></div>
+</div>
+
+<!-- =============================================================== -->
+<!-- THE NEW ANALYTICS GRID                                          -->
+<!-- =============================================================== -->
+<div class="row">
+    <!-- CHART 1: Performance Matrix (Scatter Plot) -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow h-100 chart-card ">
+            <div class="card-header"><h6 class="m-0 font-weight-bold text-primary">Student Performance Matrix</h6></div>
+            <div class="card-body"><div class="chart-container"><canvas id="performanceMatrixChart"></canvas></div></div>
+        </div>
+    </div>
+    <!-- CHART 2: Grade Distribution (Bar Chart) -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow h-100 chart-card ">
+            <div class="card-header"><h6 class="m-0 font-weight-bold text-success">Points Distribution</h6></div>
+            <div class="card-body"><div class="chart-container"><canvas id="gradeDistributionChart"></canvas></div></div>
+        </div>
+    </div>
+    <!-- CHART 3: Topic Performance (Radar Chart) -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow h-100 chart-card ">
+            <div class="card-header"><h6 class="m-0 font-weight-bold text-info">Topic Performance</h6></div>
+            <div class="card-body"><div class="chart-container"><canvas id="topicPerformanceChart"></canvas></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- CHART 4: Grading Progress (Donut) -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card shadow h-100 chart-card ">
+            <div class="card-header"><h6 class="m-0 font-weight-bold text-danger">My Grading Progress</h6></div>
+            <div class="card-body"><div class="chart-container"><canvas id="gradingProgressChart"></canvas></div></div>
+        </div>
+    </div>
+    
+
+    <!-- Upcoming Deadlines Table -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Upcoming Deadlines (Next 7 Days)</h6>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if upcoming_deadlines %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light" style="position: sticky; top: -1.25rem; z-index: 1;">
+                            <tr>
+                                <th>Assignment</th>
+                                <th>Batch</th>
+                                <th>Due Date</th>
+                                <th>Submissions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for deadline in upcoming_deadlines %}
+                            <tr>
+                                <td>
+                                    {{ deadline.title }}
+                                    {% set time_left = deadline.due_date - now %}
+                                    <small class="d-block text-muted">
+                                    {% if time_left.days > 1 %}
+                                        <span class="badge bg-success">{{ time_left.days }} days left</span>
+                                    {% elif time_left.days == 1 %}
+                                        <span class="badge bg-warning">1 day left</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Due today</span>
+                                    {% endif %}
+                                    </small>
+                                </td>
+                                <td><span class="badge bg-info">{{ deadline.batch_name }}</span></td>
+                                <td>{{ deadline.due_date.strftime('%b %d @ %I:%M %p') }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;" data-bs-toggle="tooltip" title="{{ deadline.submissions }} of {{ deadline.total_students }} submitted">
+                                        {% set percentage = (deadline.submissions / deadline.total_students * 100) if deadline.total_students > 0 else 0 %}
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: '{{ percentage }}%';" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                            {{ "%.0f"|format(percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-success text-center mt-3">No assignment deadlines in the next 7 days.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const allChartData = JSON.parse('{{ chart_data | tojson | safe }}');
+    let chartInstances = {};
+    let selectedStudentId = null;
+
+    const VIBRANT_COLORS = ['#6f42c1', '#fd7e14', '#20c997', '#0dcaf0', '#d63384', '#ffc107', '#0d6efd'];
+
+    // This function must be defined to avoid errors when initializing tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // ... (All other JavaScript functions: drawPlaceholder, destroyChart, getPerformanceData, renderPerformanceMatrix, etc. remain exactly the same as the previous response) ...
+    function drawPlaceholder(ctx, text) {
+        if (!ctx) return;
+        const canvas = ctx.canvas;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = "16px 'Poppins', sans-serif";
+        ctx.fillStyle = "#858796";
+        ctx.textAlign = "center";
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    }
+    
+    function destroyChart(chartId) {
+        if (chartInstances[chartId]) {
+            chartInstances[chartId].destroy();
+            delete chartInstances[chartId];
+        }
+    }
+
+    function getPerformanceData() {
+        if (selectedStudentId) {
+            return (allChartData.all_student_data || []).filter(d => d.student_id === selectedStudentId);
+        }
+        return allChartData.all_student_data || [];
+    }
+
+    // CHART 1: Student Performance Matrix
+    function renderPerformanceMatrix() {
+        destroyChart('performanceMatrix');
+        const ctx = document.getElementById('performanceMatrixChart')?.getContext('2d');
+        if (!ctx) return;
+
+        const studentSummary = (allChartData.all_student_data || []).reduce((acc, curr) => {
+            if (!acc[curr.student_id]) {
+                acc[curr.student_id] = { id: curr.student_id, name: curr.student_name, grades: [], attendance: curr.attendance };
+            }
+            acc[curr.student_id].grades.push(curr.grade);
+            return acc;
+        }, {});
+
+        const scatterData = Object.values(studentSummary).map(s => ({
+            x: s.attendance ? parseFloat(s.attendance) : 0,
+            y: s.grades.length > 0 ? s.grades.reduce((a, b) => a + b, 0) / s.grades.length : 0,
+            label: s.name,
+            id: s.id
+        }));
+        
+        if(scatterData.length === 0) return drawPlaceholder(ctx, "No student data to display.");
+
+        chartInstances.performanceMatrix = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets: [{ data: scatterData, pointBackgroundColor: '#6f42c1', pointRadius: 6, pointHoverRadius: 9 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Average Attendance (%)' }, min: 50, max: 100 },
+                    y: { title: { display: true, text: 'Average Grade (%)' }, min: 50, max: 100 }
+                },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw.label}: ${c.raw.y.toFixed(1)}% Grade, ${c.raw.x.toFixed(1)}% Attendance` } } },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const clickedData = elements[0].element.$context.raw;
+                        updateDashboardForStudent(clickedData.id, clickedData.label);
+                    }
+                }
+            }
+        });
+    }
+
+    // CHART 2: Grade Distribution
+    function renderGradeDistribution() {
+        destroyChart('gradeDistribution');
+        const ctx = document.getElementById('gradeDistributionChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        const grades = getPerformanceData().map(d => d.grade);
+        const gradeDistData = {
+            '90-100 (A)': grades.filter(g => g >= 90).length, '80-89 (B)': grades.filter(g => g >= 80 && g < 90).length,
+            '70-79 (C)': grades.filter(g => g >= 70 && g < 80).length, '60-69 (D)': grades.filter(g => g >= 60 && g < 70).length,
+            '<60 (F)': grades.filter(g => g < 60).length
+        };
+        if (grades.length === 0) return drawPlaceholder(ctx, "No grades available.");
+        
+        chartInstances.gradeDistribution = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(gradeDistData),
+                datasets: [{ data: Object.values(gradeDistData), backgroundColor: ['#1cc88a', '#4e73df', '#36b9cc', '#f6c23e', '#e74a3b'], borderRadius: 4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // CHART 3: Topic Performance
+    function renderTopicPerformance() {
+        destroyChart('topicPerformance');
+        const ctx = document.getElementById('topicPerformanceChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        const topicData = getPerformanceData().reduce((acc, curr) => {
+            if (!acc[curr.topic_name]) acc[curr.topic_name] = [];
+            acc[curr.topic_name].push(curr.grade);
+            return acc;
+        }, {});
+        const topicLabels = Object.keys(topicData);
+        if (topicLabels.length === 0) return drawPlaceholder(ctx, "No topic data available.");
+
+        const topicAvgGrades = topicLabels.map(topic => (topicData[topic].reduce((a, b) => a + b, 0) / topicData[topic].length));
+        
+        chartInstances.topicPerformance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: topicLabels,
+                datasets: [{
+                    label: 'Avg Grade', data: topicAvgGrades, backgroundColor: 'rgba(28, 200, 138, 0.2)',
+                    borderColor: '#1cc88a', pointBackgroundColor: '#1cc88a'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, suggestedMax: 100, pointLabels: { font: { size: 11 } } } }, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // CHART 4: Grading Progress
+    function renderGradingProgress() {
+        destroyChart('gradingProgress');
+        const ctx = document.getElementById('gradingProgressChart')?.getContext('2d');
+        if(!ctx) return;
+        const [graded, ungraded] = allChartData.grading_progress || [0,0];
+        if (graded + ungraded === 0) return drawPlaceholder(ctx, "No submissions yet.");
+        chartInstances.gradingProgress = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: ['Graded', 'Needs Grading'], datasets: [{ data: [graded, ungraded], backgroundColor: ['#1cc88a', '#e74a3b'] }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    // CHART 5: Weekly Submission Rhythm
+    function renderSubmissionRhythm() {
+        destroyChart('submissionRhythm');
+        const ctx = document.getElementById('submissionRhythmChart')?.getContext('2d');
+        if(!ctx) return;
+        const submissionCounts = allChartData.submission_rhythm || [];
+        if (submissionCounts.reduce((a, b) => a + b, 0) === 0) return drawPlaceholder(ctx, "No submissions yet.");
+        chartInstances.submissionRhythm = new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                datasets: [{ label: 'Submissions', data: submissionCounts, backgroundColor: VIBRANT_COLORS.map(c => c + 'B3') }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // VISUALIZATION 6 & 7: Top/Bottom Student Lists
+    function updateStudentLists() {
+        const studentSummary = (allChartData.all_student_data || []).reduce((acc, curr) => {
+            if (!acc[curr.student_id]) acc[curr.student_id] = { id: curr.student_id, name: curr.student_name, grades: [] };
+            acc[curr.student_id].grades.push(curr.grade);
+            return acc;
+        }, {});
+        const studentAverages = Object.values(studentSummary).map(s => ({
+            id: s.id, name: s.name, avgGrade: s.grades.length > 0 ? s.grades.reduce((a, b) => a + b, 0) / s.grades.length : 0
+        })).sort((a, b) => b.avgGrade - a.avgGrade);
+        
+        const topList = document.getElementById('topStudentsList');
+        const bottomList = document.getElementById('bottomStudentsList');
+        topList.innerHTML = studentAverages.slice(0, 5).map(s => `<li class="list-group-item d-flex justify-content-between align-items-center student-list-item" data-student-id="${s.id}" data-student-name="${s.name}">${s.name}<span class="badge bg-success rounded-pill">${s.avgGrade.toFixed(1)}%</span></li>`).join('');
+        bottomList.innerHTML = studentAverages.slice(-5).reverse().map(s => `<li class="list-group-item d-flex justify-content-between align-items-center student-list-item" data-student-id="${s.id}" data-student-name="${s.name}">${s.name}<span class="badge bg-danger rounded-pill">${s.avgGrade.toFixed(1)}%</span></li>`).join('');
+    }
+
+    // VISUALIZATION 8: Batch Leaderboard
+    function renderBatchLeaderboard() {
+        destroyChart('batchLeaderboard');
+        const ctx = document.getElementById('batchLeaderboardChart')?.getContext('2d');
+        const data = allChartData.batch_leaderboard || [];
+        if (!ctx || data.length === 0) return drawPlaceholder(ctx, "No batches with graded assignments.");
+        chartInstances.batchLeaderboard = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(b => b.batch_name),
+                datasets: [{ label: 'Avg. Grade', data: data.map(b => parseFloat(b.avg_grade).toFixed(1)), backgroundColor: VIBRANT_COLORS, borderRadius: 4 }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+        });
+    }
+    
+    // INTERACTIVITY FUNCTIONS
+    function updateDashboardForStudent(studentId, studentName) {
+        selectedStudentId = studentId;
+        document.getElementById('dashboardHeader').classList.add('d-none');
+        document.getElementById('drillDownHeader').classList.remove('d-none');
+        document.getElementById('studentNameHeader').textContent = studentName;
+        
+        document.querySelectorAll('.student-list-item').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.student-list-item[data-student-id='${studentId}']`)?.classList.add('active');
+        
+        renderGradeDistribution();
+        renderTopicPerformance();
+    }
+    
+    document.getElementById('resetDashboard').addEventListener('click', () => {
+        selectedStudentId = null;
+        document.getElementById('dashboardHeader').classList.remove('d-none');
+        document.getElementById('drillDownHeader').classList.add('d-none');
+        document.querySelectorAll('.student-list-item.active').forEach(el => el.classList.remove('active'));
+        
+        renderGradeDistribution();
+        renderTopicPerformance();
+    });
+
+    document.querySelectorAll('#topStudentsList, #bottomStudentsList').forEach(list => {
+        list.addEventListener('click', (e) => {
+            const item = e.target.closest('.student-list-item');
+            if (item) {
+                const id = parseInt(item.dataset.studentId);
+                const name = item.dataset.studentName;
+                updateDashboardForStudent(id, name);
+            }
+        });
+    });
+
+    // INITIALIZE ALL DASHBOARD COMPONENTS
+    function initializeDashboard() {
+        renderPerformanceMatrix();
+        renderGradeDistribution();
+        renderTopicPerformance();
+        renderGradingProgress();
+        renderSubmissionRhythm();
+        updateStudentLists();
+        renderBatchLeaderboard();
+    }
+
+    initializeDashboard();
+});
+</script>
+{% endblock %}

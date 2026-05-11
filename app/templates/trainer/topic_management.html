@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Topic Management{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('trainer.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Topic Management</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Topic Management</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTopicModal">
+                <i class="fas fa-plus me-2"></i>Create Topic
+            </button>
+        </div>
+        <p class="text-muted">Manage topics for your assigned courses.</p>
+    </div>
+</div>
+
+<!-- Topics Table -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">All Topics</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="topicsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Topic Name</th>
+                        <th>Course</th>
+                        <th>Sequence</th>
+                        <th>Created By</th>
+                        <th>Created On</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for topic in topics %}
+                    <tr>
+                        <td>{{ topic.topic_name }}</td>
+                        <td>{{ topic.course_name }}</td>
+                        <td>{{ topic.sequence_order }}</td>
+                        <td>{{ topic.trainer_name }}</td>
+                        <td>{{ topic.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" 
+                                        data-bs-target="#editTopicModal" data-topic-id="{{ topic.topic_id }}"
+                                        data-topic-name="{{ topic.topic_name }}" data-description="{{ topic.description }}"
+                                        data-course-id="{{ topic.course_id }}" data-sequence="{{ topic.sequence_order }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="confirmDelete('{{ topic.topic_id }}', '{{ topic.topic_name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Topic Modal -->
+<div class="modal fade" id="createTopicModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Topic</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createTopicForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="topicName" class="form-label">Topic Name *</label>
+                        <input type="text" class="form-control" id="topicName" name="topic_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="courseId" class="form-label">Course *</label>
+                        <select class="form-select" id="courseId" name="course_id" required>
+                            <option value="">Select Course</option>
+                            {% for course in courses %}
+                            <option value="{{ course.course_id }}">{{ course.course_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sequenceOrder" class="form-label">Sequence Order</label>
+                        <input type="number" class="form-control" id="sequenceOrder" name="sequence_order" min="1" value="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Topic</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Topic Modal -->
+<div class="modal fade" id="editTopicModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Topic</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editTopicForm">
+                <input type="hidden" id="editTopicId" name="topic_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editTopicName" class="form-label">Topic Name *</label>
+                        <input type="text" class="form-control" id="editTopicName" name="topic_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editCourseId" class="form-label">Course *</label>
+                        <select class="form-select" id="editCourseId" name="course_id" required>
+                            <option value="">Select Course</option>
+                            {% for course in courses %}
+                            <option value="{{ course.course_id }}">{{ course.course_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editSequenceOrder" class="form-label">Sequence Order</label>
+                        <input type="number" class="form-control" id="editSequenceOrder" name="sequence_order" min="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Topic</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize DataTable
+    $(document).ready(function() {
+        $('#topicsTable').DataTable({
+            pageLength: 10,
+            ordering: true,
+            responsive: true
+        });
+    });
+
+    // Handle create topic form submission
+    $('#createTopicForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        fetch('{{ url_for("trainer.create_topic") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Topic created successfully');
+                $('#createTopicModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while creating the topic');
+        });
+    });
+
+    // Handle edit topic modal show
+    $('#editTopicModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        const modal = $(this);
+        
+        modal.find('#editTopicId').val(button.data('topic-id'));
+        modal.find('#editTopicName').val(button.data('topic-name'));
+        modal.find('#editDescription').val(button.data('description'));
+        modal.find('#editCourseId').val(button.data('course-id'));
+        modal.find('#editSequenceOrder').val(button.data('sequence'));
+    });
+
+    // Handle edit topic form submission
+    $('#editTopicForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        fetch('{{ url_for("trainer.update_topic", topic_id=0) }}'.replace('0', data.topic_id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Topic updated successfully');
+                $('#editTopicModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the topic');
+        });
+    });
+
+    // Confirm topic deletion
+    function confirmDelete(topicId, topicName) {
+        if (confirm(`Are you sure you want to delete the topic "${topicName}"? This action cannot be undone.`)) {
+            fetch('{{ url_for("trainer.delete_topic", topic_id=0) }}'.replace('0', topicId), {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Topic deleted successfully');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting the topic');
+            });
+        }
+    }
+</script>
+{% endblock %}

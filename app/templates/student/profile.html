@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('student.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Profile</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">My Profile</h1>
+        <p class="text-muted">Manage your personal information and account settings.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Personal Information</h6>
+            </div>
+            <div class="card-body">
+                <form id="profileForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="fullName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="fullName" value="{{ student_data.full_name }}" disabled>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" value="{{ student_data.email }}" disabled>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ student_data.phone }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="enrollmentDate" class="form-label">Enrollment Date</label>
+                            <!-- <input type="text" class="form-control" id="enrollmentDate" value="{{ student_data.enrollment_date.strftime('%Y-%m-%d') }}" disabled> -->
+                             <input type="text" class="form-control" id="enrollmentDate" value="{{ student_data.enrollment_date.strftime('%Y-%m-%d') if student_data.enrollment_date else 'N/A' }}" disabled>
+
+<!-- And also for other date fields -->
+<p>{{ student_data.start_date.strftime('%Y-%m-%d') if student_data.start_date else 'N/A' }} to {{ student_data.end_date.strftime('%Y-%m-%d') if student_data.end_date else 'N/A' }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="course" class="form-label">Course</label>
+                        <input type="text" class="form-control" id="course" value="{{ student_data.course_name }}" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="batch" class="form-label">Batch</label>
+                        <input type="text" class="form-control" id="batch" value="{{ student_data.batch_name or 'Not assigned' }}" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Account Status</label>
+                        <div>
+                            <span class="badge bg-{{ 'success' if student_data.is_active else 'secondary' }}">
+                                {{ 'Active' if student_data.is_active else 'Inactive' }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Update Profile
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Information -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Course Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Course Duration:</strong>
+                        <p>{{ student_data.duration_weeks }} weeks</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Course Period:</strong>
+                        <p>
+                            {{ student_data.start_date.strftime('%Y-%m-%d') }} to 
+                            {{ student_data.end_date.strftime('%Y-%m-%d') }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Maximum Leaves:</strong>
+                        <p>{{ student_data.max_leaves }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Days Completed:</strong>
+                        <p>
+                            {% set days_completed = (now.date() - student_data.start_date).days %}
+                            {{ days_completed }} days
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="progress mb-4" style="height: 20px;">
+                    {% set progress_percentage = ((now.date() - student_data.start_date).days / ((student_data.end_date - student_data.start_date).days)) * 100 %}
+                    <div class="progress-bar" role="progressbar" style="width: '{{ progress_percentage|round|int }}%';" 
+                         aria-valuenow="{{ progress_percentage|round|int }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ progress_percentage|round|int }}%
+                    </div>
+                </div>
+                
+                <h6 class="mb-3">Course Progress</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Attendance</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-success" style="width: 85%;"></div>
+                                    </div>
+                                    <small>85%</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Assignments</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-info" style="width: 70%;"></div>
+                                    </div>
+                                    <small>70%</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Overall Performance</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-warning" style="width: 78%;"></div>
+                                    </div>
+                                    <small>78%</small>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Statistics -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Account Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h5>{{ student_data.created_at.strftime('%Y-%m-%d') }}</h5>
+                                <p class="mb-0">Account Created</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h5>{{ student_data.enrollment_date.strftime('%Y-%m-%d') }}</h5>
+                                <p class="mb-0">Enrollment Date</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h5>{{ ((now.date() - student_data.created_at.date()).days) }}</h5>
+                                <p class="mb-0">Days Active</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <h5>Student</h5>
+                                <p class="mb-0">Account Type</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Handle profile form submission
+    $('#profileForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const phone = $('#phone').val();
+        
+        if (!phone) {
+            alert('Phone number is required.');
+            return;
+        }
+        
+        fetch('{{ url_for("student.update_profile") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone: phone })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Profile updated successfully!');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the profile');
+        });
+    });
+
+    // Validate phone number format
+    $('#phone').on('blur', function() {
+        const phone = $(this).val();
+        const phoneRegex = /^[+]?[0-9]{10,15}$/;
+        
+        if (phone && !phoneRegex.test(phone)) {
+            alert('Please enter a valid phone number (10-15 digits, optional + prefix).');
+            $(this).focus();
+        }
+    });
+</script>
+{% endblock %}

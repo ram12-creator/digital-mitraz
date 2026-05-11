@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">Admin Analytics Dashboard</h1>
+        <p class="text-muted">Welcome back, {{ current_user.full_name }}! Here's your operational command center.</p>
+    </div>
+</div>
+
+<!-- KPI Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Assigned Courses</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_courses }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-book fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Students</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_students }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-users fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Active Batches</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active_batches }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-layer-group fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2 hover-effect">
+            <a href="{{ url_for('admin.leave_management') }}" class="text-decoration-none">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Leaves</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending_leaves }}</div>
+                        </div>
+                        <div class="col-auto"><i class="fas fa-calendar-times fa-2x text-gray-300"></i></div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+
+<!-- ======================= SECONDARY VISUALS ======================= -->
+<div class="row">
+    <!-- Chart 3: Course Popularity (Widened) -->
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow h-100 ">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-info">Course Enrollment Distribution</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="coursePopularityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 4: Leave Requests (Widened) -->
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow h-100 ">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-warning">Leave Requests</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="leaveStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================= DYNAMIC ANALYTICS SECTION ======================= -->
+<div class="row">
+    <!-- Chart 1: Attendance Trend (With Filters) -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow h-100 ">
+            <div class="card-header bg-white py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Attendance Analytics</h6>
+                
+                <!-- FILTERS -->
+                <div class="d-flex gap-2">
+                    <select id="attendanceBatchFilter" class="form-select form-select-sm" style="width: 150px; border-color: #D32F2F;">
+                        <option value="all">All Batches</option>
+                        {% for batch in batches %}
+                        <option value="{{ batch.batch_id }}">{{ batch.batch_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="attendanceTimeFilter" class="form-select form-select-sm" style="width: 120px; border-color: #D32F2F;">
+                        <option value="day">Day Wise</option>
+                        <option value="month" selected>Month Wise</option>
+                        <option value="year">Year Wise</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 320px;">
+                    <canvas id="attendanceTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Batch Leaderboard -->
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow h-100 ">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-success">Batch Performance</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 320px;">
+                    <canvas id="batchPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ======================= ACTION CENTER ======================= -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white py-3 border-left-warning">
+                <h6 class="m-0 font-weight-bold text-warning"><i class="fas fa-exclamation-circle me-2"></i>Pending Leave Requests</h6>
+            </div>
+            <div class="card-body">
+                {% if pending_leaves_list %}
+                    <ul class="list-group list-group-flush">
+                    {% for leave in pending_leaves_list %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold text-dark">{{ leave.full_name }}</span>
+                                <small class="text-muted d-block">{{ leave.start_date.strftime('%b %d') }} - {{ leave.end_date.strftime('%b %d') }}</small>
+                            </div>
+                            <a href="{{ url_for('admin.leave_management') }}#actions-{{leave.leave_id}}" class="btn btn-sm btn-outline-warning">Review</a>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-success small mb-0">No pending leave requests. Great job!</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white py-3 border-left-danger">
+                <h6 class="m-0 font-weight-bold text-danger"><i class="fas fa-flag me-2"></i>Students at Risk (< 75% Attendance)</h6>
+            </div>
+            <div class="card-body">
+                {% if students_to_watch %}
+                    <ul class="list-group list-group-flush">
+                    {% for student in students_to_watch %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold text-dark">{{ student.full_name }}</span>
+                                <small class="text-muted d-block">{{ student.batch_name }}</small>
+                            </div>
+                            <span class="badge bg-danger rounded-pill">{{ "%.1f"|format(student.attendance_pct) }}%</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-success small mb-0">All students have good attendance records.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // --- THEME COLORS ---
+    const brandRed = '#D32F2F';
+    const brandCharcoal = '#2C3E50'; // Replaced Black with Charcoal
+    const brandGold = '#F9A825';
+    const brandGreen = '#2E7D32';
+
+    // Chart Instances
+    let attendanceChart = null;
+    let batchChart = null;
+    let popChart = null;
+    let leaveChart = null;
+
+    // --- 1. INITIALIZE & FETCH DATA ---
+    function fetchDashboardData() {
+        const filterType = document.getElementById('attendanceTimeFilter').value;
+        const batchId = document.getElementById('attendanceBatchFilter').value;
+
+        fetch('/admin/api/dashboard_stats', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ filter_type: filterType, batch_id: batchId })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if(result.success) {
+                updateCharts(result.data);
+            } else {
+                console.error("API Error:", result.message);
+            }
+        })
+        .catch(err => console.error("Fetch Error:", err));
+    }
+
+    // --- 2. UPDATE CHART LOGIC ---
+    function updateCharts(data) {
+        // A. Attendance Trend (Line)
+        const attCtx = document.getElementById('attendanceTrendChart').getContext('2d');
+        if (attendanceChart) attendanceChart.destroy();
+        
+        const gradient = attCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(211, 47, 47, 0.5)'); 
+        gradient.addColorStop(1, 'rgba(211, 47, 47, 0.0)');
+
+        attendanceChart = new Chart(attCtx, {
+            type: 'line',
+            data: {
+                labels: data.attendance.labels,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: data.attendance.data,
+                    borderColor: brandRed,
+                    backgroundColor: gradient,
+                    pointBackgroundColor: brandCharcoal,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+
+        // B. Batch Performance (Bar) - Renamed "Avg Grade" to "Performance"
+        const batchCtx = document.getElementById('batchPerformanceChart').getContext('2d');
+        if (batchChart) batchChart.destroy();
+        batchChart = new Chart(batchCtx, {
+            type: 'bar',
+            data: {
+                labels: data.batch_performance.labels,
+                datasets: [{
+                    label: 'Performance', 
+                    data: data.batch_performance.data,
+                    backgroundColor: brandCharcoal,
+                    borderRadius: 4
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 100 } } }
+        });
+
+        // C. Course Popularity
+        const popCtx = document.getElementById('coursePopularityChart').getContext('2d');
+        if (popChart) popChart.destroy();
+        popChart = new Chart(popCtx, {
+            type: 'bar',
+            data: {
+                labels: data.course_popularity.labels,
+                datasets: [{ label: 'Students', data: data.course_popularity.data, backgroundColor: brandRed, borderRadius: 4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+         // D. Leave Status
+        const leaveCtx = document.getElementById('leaveStatusChart').getContext('2d');
+        if (leaveChart) leaveChart.destroy();
+
+        // 1. Define specific colors for each status
+        const statusColorMap = {
+            'Pending': '#F9A825',  // Yellow
+            'Approved': '#2E7D32', // Green
+            'Rejected': '#D32F2F'  // Red
+        };
+
+        // 2. Generate the color list based on the actual data labels
+        // This ensures the color is correct even if the database changes the sort order
+        const dynamicColors = data.leave_breakdown.labels.map(label => {
+            // Capitalize label to match keys (just in case) like 'pending' -> 'Pending'
+            let formattedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+            return statusColorMap[formattedLabel] || '#757575'; // Default to Grey if unknown
+        });
+
+        leaveChart = new Chart(leaveCtx, {
+            type: 'doughnut',
+            data: {
+                labels: data.leave_breakdown.labels,
+                datasets: [{
+                    data: data.leave_breakdown.data,
+                    backgroundColor: dynamicColors, // <--- Use the new dynamic list
+                    borderWidth: 0
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { position: 'bottom' } } 
+            }
+        });
+    }
+
+    // --- 3. EVENT LISTENERS ---
+    document.getElementById('attendanceBatchFilter').addEventListener('change', fetchDashboardData);
+    document.getElementById('attendanceTimeFilter').addEventListener('change', fetchDashboardData);
+
+    // Initial Load
+    fetchDashboardData();
+});
+</script>
+{% endblock %}

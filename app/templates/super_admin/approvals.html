@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Approvals{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h4 class="mb-4">Pending Approvals</h4>
+        <div class="card shadow">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Requester</th>
+                            <th>Action</th>
+                            <th>Student Name</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests %}
+                        <tr>
+                            <td>{{ req.requester_name }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'danger' if req.action_type == 'DROPOUT' else 'warning' }}">
+                                    {{ req.action_type }}
+                                </span>
+                            </td>
+                            <td>{{ req.student_name }}</td>
+                            <td>{{ req.reason }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-success" onclick="decide({{ req.request_id }}, 'APPROVED')">Approve</button>
+                                <button class="btn btn-sm btn-danger" onclick="decide({{ req.request_id }}, 'REJECTED')">Reject</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center">No pending requests.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+async function decide(id, decision) {
+    if(!confirm("Confirm action?")) return;
+    const res = await fetch(`/super_admin/process_approval/${id}`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ decision: decision })
+    });
+    const data = await res.json();
+    alert(data.message);
+    location.reload();
+}
+</script>
+{% endblock %}

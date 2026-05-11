@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}My Batches{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('trainer.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">My Batches</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">My Assigned Batches</h1>
+        <p class="text-muted">Select a batch to manage its topics, assignments, and students.</p>
+    </div>
+</div>
+
+<!-- Batches Grid -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Your Batches</h6>
+    </div>
+    <div class="card-body">
+        {% if batches %}
+        <div class="row">
+            {% for batch in batches %}
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card h-100 border-left-primary shadow-sm hover-card">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="card-title text-primary">{{ batch.batch_name }}</h5>
+                            <span class="badge bg-info align-self-start">{{ batch.course_name }}</span>
+                        </div>
+                        <p class="card-text mb-2 text-muted small">
+                            {{ batch.start_date.strftime('%b %d, %Y') }} - {{ batch.end_date.strftime('%b %d, %Y') }}
+                        </p>
+                        <p class="card-text mb-4">
+                            <i class="fas fa-users me-2 text-gray-400"></i>
+                            <strong>{{ batch.student_count }}</strong> Students
+                        </p>
+                        <!-- This link takes the user to the detailed management page -->
+                        <a href="{{ url_for('trainer.manage_batch', batch_id=batch.batch_id) }}" class="btn btn-primary mt-auto stretched-link">
+                            <i class="fas fa-cog me-2"></i>Manage Batch
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            You are not currently assigned to any active batches.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

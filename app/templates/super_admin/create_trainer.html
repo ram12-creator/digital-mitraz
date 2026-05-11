@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Create Trainer{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('super_admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Create Trainer</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">Create New Trainer</h1>
+        <p class="text-muted">Create a new trainer account and assign courses to teach.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Trainer Details</h6>
+            </div>
+            <div class="card-body">
+                <form id="createTrainerForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">First Name *</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                            <div class="invalid-feedback" id="first_name_error"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                            <div class="invalid-feedback" id="last_name_error"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="invalid-feedback" id="email_error"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" required>
+                            <div class="invalid-feedback" id="phone_error"></div>
+                        </div>
+                    </div>
+
+
+<div class="mb-3">
+        <label class="form-label">Gender *</label>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="gender" id="genderMale" value="Male" checked>
+                    <label class="form-check-label" for="genderMale">
+                        Male
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="gender" id="genderFemale" value="Female">
+                    <label class="form-check-label" for="genderFemale">
+                        Female
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="invalid-feedback" id="gender-error"></div>
+    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="profile_picture" class="form-label">Profile Picture</label>
+                            <input type="file" class="form-control" id="profile_picture" name="profile_picture" accept="image/*">
+                            <div class="form-text">Optional. Accepted formats: JPG, PNG, GIF. Max size: 2MB</div>
+                            <div class="invalid-feedback" id="profile_picture_error"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="qualifications" class="form-label">Qualifications</label>
+                        <textarea class="form-control" id="qualifications" name="qualifications" rows="3" 
+                                 placeholder="Enter trainer qualifications and experience..."></textarea>
+                        <div class="invalid-feedback" id="qualifications_error"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Assign Courses</label>
+                        <div class="row">
+                            {% for course in courses %}
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input course-checkbox" type="checkbox" 
+                                           name="course_ids" value="{{ course.course_id }}" 
+                                           id="course{{ course.course_id }}">
+                                    <label class="form-check-label" for="course{{ course.course_id }}">
+                                        {{ course.course_name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <button type="button" id="submitButton" class="btn btn-primary">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>Create Trainer
+                    </button>
+                    <a href="{{ url_for('super_admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Password Generation</h6>
+                    <p class="mb-0">The trainer's password will be automatically generated using the pattern: <strong>lastname + last 5 digits of phone number</strong>.</p>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading"><i class="fas fa-envelope me-2"></i>Email Notification</h6>
+                    <p class="mb-0">Credentials will be sent to the provided email address automatically.</p>
+                </div>
+                
+                <h6>Available Courses:</h6>
+                <ul class="list-group list-group-flush">
+                    {% for course in courses %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ course.course_name }}
+                        <span class="badge bg-primary rounded-pill">{{ course.course_id }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('createTrainerForm');
+    const submitButton = document.getElementById('submitButton');
+
+    submitButton.addEventListener('click', async function(e) {
+        e.preventDefault();
+
+        // Clear previous errors
+        clearErrors();
+
+        // Validate form
+        if (!validateForm()) {
+            return;
+        }
+
+        // --- CORRECTED: Use FormData to automatically capture all form fields ---
+        // This single line automatically gets all fields: first_name, last_name, email, phone,
+        // qualifications, the selected gender, the profile_picture file, and all checked courses.
+        const formData = new FormData(form);
+
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch('{{ url_for("super_admin.create_trainer") }}', {
+                method: 'POST',
+                body: formData
+                // NOTE: Do NOT set the 'Content-Type' header here.
+                // The browser will do it automatically for FormData and include the necessary boundary.
+            });
+
+            // Check if the response is valid JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show success message and redirect
+                    alert(data.message || 'Trainer created successfully!');
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        // Fallback redirect if not provided
+                        window.location.href = '{{ url_for("super_admin.trainer_management") }}';
+                    }
+                } else {
+                    // Show backend validation errors on the form
+                    if (data.errors) {
+                        displayErrors(data.errors);
+                    } else {
+                        alert('Error: ' + (data.message || 'An unknown error occurred'));
+                    }
+                }
+            } else {
+                // Handle cases where the server returns an HTML error page instead of JSON
+                const text = await response.text();
+                console.error('Non-JSON response received:', text.substring(0, 500));
+                alert('A server error occurred. Please check the console for details.');
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            alert('A network error occurred. Please check your connection and try again.');
+        } finally {
+            // Restore button to its original state
+            submitButton.innerHTML = '<i class="fas fa-chalkboard-teacher me-2"></i>Create Trainer';
+            submitButton.disabled = false;
+        }
+    });
+
+    function validateForm() {
+        let isValid = true;
+
+        // Validate first name
+        const firstName = document.getElementById('first_name').value.trim();
+        if (!firstName) {
+            showError('first_name', 'First name is required');
+            isValid = false;
+        } else if (firstName.length < 2) {
+            showError('first_name', 'First name must be at least 2 characters');
+            isValid = false;
+        }
+
+        // Validate last name
+        const lastName = document.getElementById('last_name').value.trim();
+        if (!lastName) {
+            showError('last_name', 'Last name is required');
+            isValid = false;
+        } else if (lastName.length < 2) {
+            showError('last_name', 'Last name must be at least 2 characters');
+            isValid = false;
+        }
+
+        // Validate email
+        const email = document.getElementById('email').value.trim();
+        if (!email) {
+            showError('email', 'Email is required');
+            isValid = false;
+        } else if (!isValidEmail(email)) {
+            showError('email', 'Please enter a valid email address');
+            isValid = false;
+        }
+
+        // Validate phone
+        const phone = document.getElementById('phone').value.trim();
+        if (!phone) {
+            showError('phone', 'Phone number is required');
+            isValid = false;
+        } else if (!isValidPhone(phone)) {
+            showError('phone', 'Please enter a valid phone number (10-15 digits)');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    function isValidEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(String(email).toLowerCase());
+    }
+
+    function isValidPhone(phone) {
+        // This regex allows for an optional '+' and between 10 to 15 digits.
+        const re = /^\+?[0-9]{10,15}$/;
+        return re.test(String(phone));
+    }
+
+    function showError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(fieldId + '_error'); // Assumes your error div has id like 'email_error'
+
+        if (field && errorElement) {
+            field.classList.add('is-invalid');
+            errorElement.textContent = message;
+
+            // Focus on the first field with an error
+            if (!document.querySelector('.is-invalid:focus')) {
+                field.focus();
+            }
+        }
+    }
+
+    function displayErrors(errors) {
+        for (const [field, message] of Object.entries(errors)) {
+            showError(field, message);
+        }
+    }
+
+    function clearErrors() {
+        // Remove all 'is-invalid' classes from form controls
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        
+        // Clear all error message texts
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    }
+});
+</script>
+{% endblock %}

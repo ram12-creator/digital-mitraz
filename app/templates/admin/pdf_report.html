@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Helvetica, sans-serif; font-size: 11px; }
+        .header { text-align: center; border-bottom: 2px solid #333; margin-bottom: 10px; }
+        .section-header { background-color: #eee; padding: 5px; font-weight: bold; border-left: 5px solid #d32f2f; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BENEFICIARY PROFILE</h1>
+        <p>Generated on: {{ now }}</p>
+    </div>
+
+    <!-- Basic -->
+    <div class="section-header">1. PERSONAL DETAILS</div>
+    <table>
+        <tr>
+            <th width="20%">Name</th><td>{{ basic.first_name }} {{ basic.last_name }}</td>
+            <th width="20%">Aadhar</th><td>{{ basic.aadhar_number }}</td>
+        </tr>
+        <tr>
+            <th>DOB</th><td>{{ basic.dob }}</td>
+            <th>Gender</th><td>{{ basic.gender }}</td>
+        </tr>
+        <tr>
+            <th>Email</th><td>{{ basic.primary_email }}</td>
+            <th>Phone</th><td>{{ basic.primary_phone }}</td>
+        </tr>
+    </table>
+
+    <!-- Socio -->
+    <div class="section-header">2. SOCIO-ECONOMIC</div>
+    <table>
+        <tr>
+            <th>Housing</th><td>{{ socio.housing_type }} ({{ socio.housing_condition }})</td>
+            <th>Assets</th><td>{{ socio.household_assets }}</td>
+        </tr>
+    </table>
+
+    <div style="margin-top: 50px; text-align: center; color: #888;">
+        Digital Mitraz Training System
+    </div>
+</body>
+</html>

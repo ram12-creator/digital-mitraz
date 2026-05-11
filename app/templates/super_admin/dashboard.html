@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Super Admin Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-cogs me-2"></i>Super Admin Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h1 class="h3 mb-0">System Overview</h1>
+        <p class="text-muted">Welcome back, {{ current_user.full_name }}! Here's a high-level view of the entire system.</p>
+    </div>
+</div>
+
+<!-- KPI Statistics Cards (Border colors handled by CSS classes) -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Courses</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_courses }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-book-open fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Students</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_students }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-users fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Admins</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_admins }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-user-shield fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Total Trainers</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_trainers }}</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Charts Row -->
+<div class="row">
+    <!-- Course Popularity Chart -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow h-100 ">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Course Popularity by Enrollment</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 320px;">
+                    <canvas id="coursePopularityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- User Distribution Chart -->
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow h-100 ">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-success">System User Distribution</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 320px;">
+                    <canvas id="userDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Management Navigation Cards -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Management Centers</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('super_admin.course_management') }}" class="text-decoration-none">
+                            <div class="card text-center hover-card p-3 h-100 border-left-primary">
+                                <i class="fas fa-book-open fa-3x text-primary mb-3"></i>
+                                <h5 class="text-dark">Course Management</h5>
+                                <p class="text-muted small mb-0">Create, edit, and manage all courses in the system.</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                         <a href="{{ url_for('super_admin.admin_management') }}" class="text-decoration-none">
+                            <div class="card text-center hover-card p-3 h-100 border-left-info">
+                                <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
+                                <h5 class="text-dark">Admin Management</h5>
+                                <p class="text-muted small mb-0">Manage administrator accounts and their course assignments.</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('super_admin.trainer_management') }}" class="text-decoration-none">
+                            <div class="card text-center hover-card p-3 h-100 border-left-warning">
+                                <i class="fas fa-chalkboard-teacher fa-3x text-warning mb-3"></i>
+                                <h5 class="text-dark">Trainer Management</h5>
+                                <p class="text-muted small mb-0">Manage trainer accounts and their course assignments.</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Safely parse chart data passed from Flask
+    const chartData = JSON.parse('{{ chart_data | tojson | safe }}');
+
+    // === BRAND COLORS ===
+    const brandRed = '#D32F2F';
+    const brandBlack = '#1A1A1A';
+    const brandGrey = '#757575';
+    const brandGold = '#F9A825';
+
+    // --- 1. User Distribution Chart (Pie Chart) ---
+    const userDistCtx = document.getElementById('userDistributionChart')?.getContext('2d');
+    if (userDistCtx && chartData.user_distribution && chartData.user_distribution.data.some(d => d > 0)) {
+        new Chart(userDistCtx, {
+            type: 'pie',
+            data: {
+                labels: chartData.user_distribution.labels,
+                datasets: [{
+                    data: chartData.user_distribution.data,
+                    // UPDATED: Use Brand Colors (Red, Black, Grey)
+                    backgroundColor: [brandRed, brandBlack, brandGrey], 
+                    hoverBackgroundColor: ['#B71C1C', '#000000', '#616161'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { 
+                            usePointStyle: true, 
+                            padding: 20,
+                            font: { family: "'Poppins', sans-serif" }
+                        }
+                    }
+                }
+            }
+        });
+    } else if (userDistCtx) {
+        userDistCtx.font = "16px 'Poppins', sans-serif";
+        userDistCtx.fillStyle = "#858796";
+        userDistCtx.textAlign = "center";
+        userDistCtx.fillText("No user data available.", userDistCtx.canvas.width / 2, userDistCtx.canvas.height / 2);
+    }
+
+    // --- 2. Course Popularity Chart (Bar Chart) ---
+    const popularityCtx = document.getElementById('coursePopularityChart')?.getContext('2d');
+    if (popularityCtx && chartData.course_popularity && chartData.course_popularity.labels.length > 0) {
+        new Chart(popularityCtx, {
+            type: 'bar',
+            data: {
+                labels: chartData.course_popularity.labels,
+                datasets: [{
+                    label: 'Number of Students',
+                    data: chartData.course_popularity.data,
+                    // UPDATED: Use Brand Red for Bars
+                    backgroundColor: brandRed,
+                    borderColor: '#B71C1C',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        title: { display: true, text: 'Total Enrolled Students' },
+                        grid: { color: '#f0f0f0' }
+                    },
+                    x: { 
+                        grid: { display: false } 
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: brandBlack,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.raw} Students`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else if (popularityCtx) {
+        popularityCtx.font = "16px 'Poppins', sans-serif";
+        popularityCtx.fillStyle = "#858796";
+        popularityCtx.textAlign = "center";
+        popularityCtx.fillText("No course enrollment data to show.", popularityCtx.canvas.width / 2, popularityCtx.canvas.height / 2);
+    }
+});
+</script>
+<style>
+.hover-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e3e6f0;
+}
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1)!important;
+    border-color: #D32F2F; /* Red Border on Hover */
+}
+</style>
+{% endblock %}
