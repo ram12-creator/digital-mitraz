@@ -25,10 +25,10 @@ def create_app():
             'database': os.getenv('DB_NAME'),
             'user': os.getenv('DB_USER'),
             'password': os.getenv('DB_PASSWORD'),
-            'port': int(os.getenv('DB_PORT', 3306)),
+            'port': int(os.getenv('DB_PORT', 21235)),  # Force integer
             'use_pure': True,
             'connection_timeout': 30,
-            'ssl_disabled': False  # Enable SSL but let system handle certificates
+            'ssl_disabled': False
         },
         UPLOAD_FOLDER=os.path.join(app.root_path, 'static', 'uploads'),
         ALLOWED_EXTENSIONS={'png', 'jpg', 'jpeg', 'gif'},
@@ -42,6 +42,9 @@ def create_app():
         MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
     )
     
+    # Remove None values from DB_CONFIG
+    app.config['DB_CONFIG'] = {k: v for k, v in app.config['DB_CONFIG'].items() if v is not None}
+    
     # Create necessary upload subdirectories if they don't exist
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profile_pictures'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'assignments'), exist_ok=True)
@@ -53,24 +56,20 @@ def create_app():
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
 
-    # --- Simplified Database Connection Helper ---
+    # --- Database Connection Helper ---
     def get_db_connection():
         try:
-            # Get DB config without custom CA path
             config = app.config['DB_CONFIG'].copy()
-            
-            # Remove any ssl_ca if present
-            config.pop('ssl_ca', None)
-            
-            # Create connection
+            app.logger.info(f"Connecting to {config.get('host')}:{config.get('port')}")
             conn = mysql.connector.connect(**config)
             conn.cmd_reset_connection()
+            app.logger.info("Database connected successfully!")
             return conn
-            
         except mysql.connector.Error as err:
-            app.logger.error(f"Database connection error: {err}")
-            app.logger.error(f"Error code: {err.errno}")
-            app.logger.error(f"Error message: {err.msg}")
+            app.logger.error(f"DB Error: {err}")
+            return None
+        except Exception as e:
+            app.logger.error(f"Error: {e}")
             return None
     
     app.get_db_connection = get_db_connection
