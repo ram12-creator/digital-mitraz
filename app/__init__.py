@@ -20,16 +20,6 @@ def create_app():
     app.config.from_mapping(
         SECRET_KEY=os.getenv('SECRET_KEY'),
         DEBUG=os.getenv('DEBUG', 'False').lower() in ['true', '1', 't'],
-        DB_CONFIG={
-            'host': os.getenv('DB_HOST'),
-            'database': os.getenv('DB_NAME'),
-            'user': os.getenv('DB_USER'),
-            'password': os.getenv('DB_PASSWORD'),
-            'port': int(os.getenv('DB_PORT', 21235)),  # Force integer
-            'use_pure': True,
-            'connection_timeout': 30,
-            'ssl_disabled': False
-        },
         UPLOAD_FOLDER=os.path.join(app.root_path, 'static', 'uploads'),
         ALLOWED_EXTENSIONS={'png', 'jpg', 'jpeg', 'gif'},
         MAX_CONTENT_LENGTH=2 * 1024 * 1024,
@@ -42,9 +32,6 @@ def create_app():
         MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER')
     )
     
-    # Remove None values from DB_CONFIG
-    app.config['DB_CONFIG'] = {k: v for k, v in app.config['DB_CONFIG'].items() if v is not None}
-    
     # Create necessary upload subdirectories if they don't exist
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'profile_pictures'), exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'assignments'), exist_ok=True)
@@ -56,20 +43,75 @@ def create_app():
     login_manager.login_view = 'auth.login'
     mail.init_app(app)
 
-    # --- Database Connection Helper ---
+    # --- Database Connection Helper with SSL Support for Aiven MySQL ---
     def get_db_connection():
+        """
+        Creates a database connection with SSL enabled for Aiven MySQL.
+        Uses the CA certificate downloaded from Aiven.
+        """
         try:
-            config = app.config['DB_CONFIG'].copy()
-            app.logger.info(f"Connecting to {config.get('host')}:{config.get('port')}")
+            # Get certificate path - check multiple possible locations
+            ssl_ca_path = os.getenv('DB_SSL_CA', '')
+            
+            # If no path in env, try default locations
+            if not ssl_ca_path or not os.path.exists(ssl_ca_path):
+                possible_paths = [
+                    os.path.join(app.root_path, 'ca.pem'),  # app/ca.pem
+                    os.path.join(app.root_path, 'app', 'ca.pem'),  # app/app/ca.pem
+                    'ca.pem',  # root directory
+                ]
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        ssl_ca_path = path
+                        break
+            
+            # Build SSL configuration if certificate exists
+            ssl_config = {}
+            if ssl_ca_path and os.path.exists(ssl_ca_path):
+                ssl_config = {
+                    'ssl_ca': ssl_ca_path,
+                    'ssl_disabled': False,
+                    'use_pure': True
+                }
+                app.logger.info(f"SSL Certificate loaded from: {ssl_ca_path}")
+            else:
+                app.logger.warning("SSL CA certificate not found. Attempting connection without SSL...")
+                ssl_config = {'ssl_disabled': False}  # Let server negotiate
+            
+            # Build database configuration
+            config = {
+                'host': os.getenv('DB_HOST'),
+                'database': os.getenv('DB_NAME'),
+                'user': os.getenv('DB_USER'),
+                'password': os.getenv('DB_PASSWORD'),
+                'port': int(os.getenv('DB_PORT', 21235)),
+                'connection_timeout': 30,
+                'use_pure': True,
+                **ssl_config
+            }
+            
+            # Remove None values to avoid errors
+            config = {k: v for k, v in config.items() if v is not None}
+            
+            app.logger.info(f"Connecting to {config['host']}:{config['port']}")
+            
+            # Establish connection
             conn = mysql.connector.connect(**config)
+            
+            # Reset connection for clean state
             conn.cmd_reset_connection()
-            app.logger.info("Database connected successfully!")
+            
+            app.logger.info("Database connection established successfully!")
             return conn
+            
         except mysql.connector.Error as err:
-            app.logger.error(f"DB Error: {err}")
+            app.logger.error(f"Database connection error: {err}")
+            app.logger.error(f"Error code: {err.errno}")
+            if hasattr(err, 'msg'):
+                app.logger.error(f"Error message: {err.msg}")
             return None
         except Exception as e:
-            app.logger.error(f"Error: {e}")
+            app.logger.error(f"Unexpected database error: {e}")
             return None
     
     app.get_db_connection = get_db_connection
